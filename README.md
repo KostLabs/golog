@@ -118,11 +118,26 @@ influence numbers.
 
 Benchmark summary (directed at typical structured log calls):
 
-| Benchmark | ns/op | B/op | allocs/op |
-|---|---:|---:|---:|
-| DefaultLogger / Direct.Info | ~984 ns/op | 144 B/op | 6 allocs/op |
-| DefaultLogger / Package.Info | ~1064 ns/op | 488 B/op | 10 allocs/op |
-| DefaultLogger / Direct.MergeTwoMaps | ~1172 ns/op | 192 B/op | 12 allocs/op |
+```
+go test -bench . -benchmem -run '^$'
+goos: darwin
+goarch: arm64
+pkg: github.com/KostLabs/golog
+cpu: Apple M3 Pro
+BenchmarkDefaultLogger/Direct.Info-11    1696510               704.4 ns/op            96 B/op          5 allocs/op
+BenchmarkDefaultLogger/Package.Info-11           1497908               800.0 ns/op           440 B/op          9 allocs/op
+BenchmarkDefaultLogger/Direct.MergeTwoMaps-11    1484871               809.3 ns/op           112 B/op          7 allocs/op
+BenchmarkDebugLevelLogger/Direct.Info-11         1715218               700.9 ns/op            96 B/op          5 allocs/op
+BenchmarkDebugLevelLogger/Package.Info-11        1474888               838.2 ns/op           440 B/op          9 allocs/op
+BenchmarkDebugLevelLogger/Direct.MergeTwoMaps-11                 1470980               815.6 ns/op           112 B/op            7 allocs/op
+BenchmarkWithBaseFieldsLogger/Direct.Info-11                     1401432               854.2 ns/op            96 B/op            5 allocs/op
+BenchmarkWithBaseFieldsLogger/Package.Info-11                    1264999               948.7 ns/op           440 B/op            9 allocs/op
+BenchmarkWithBaseFieldsLogger/Direct.MergeTwoMaps-11             1246974               962.4 ns/op           112 B/op            7 allocs/op
+BenchmarkCustomTimeFormatLogger/Direct.Info-11                   1494142               801.8 ns/op            96 B/op            5 allocs/op
+BenchmarkCustomTimeFormatLogger/Package.Info-11                  1338704               900.4 ns/op           440 B/op            9 allocs/op
+BenchmarkCustomTimeFormatLogger/Direct.MergeTwoMaps-11           1319662               910.7 ns/op           112 B/op            7 allocs/op
+PASS
+```
 
 How to reproduce locally:
 
@@ -131,14 +146,6 @@ cd /path/to/loggerv2
 go test -bench . -benchmem -run '^$'
 ```
 
-For CPU/memory profiles you can build the test binary and run it with
-profiling flags:
-
-```bash
-go test -c -o golog.test
-./golog.test -test.bench . -test.benchmem -test.run '^$' -test.memprofile=mem.prof -test.cpuprofile=cpu.prof
-go tool pprof -top ./golog.test mem.prof
-```
 
 ## When to use the fast encoder or tune further
 
