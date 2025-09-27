@@ -1,6 +1,8 @@
+version: 2
 project_name: golog
 builds:
-  skip: true
+  - id: skip-build
+    skip: true
 
 changelog:
   # Set it to true if you wish to skip the changelog generation.
