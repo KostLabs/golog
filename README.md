@@ -124,19 +124,20 @@ goos: darwin
 goarch: arm64
 pkg: github.com/KostLabs/golog
 cpu: Apple M3 Pro
-BenchmarkDefaultLogger/Direct.Info-11    1696510               704.4 ns/op            96 B/op          5 allocs/op
-BenchmarkDefaultLogger/Package.Info-11           1497908               800.0 ns/op           440 B/op          9 allocs/op
-BenchmarkDefaultLogger/Direct.MergeTwoMaps-11    1484871               809.3 ns/op           112 B/op          7 allocs/op
-BenchmarkDebugLevelLogger/Direct.Info-11         1715218               700.9 ns/op            96 B/op          5 allocs/op
-BenchmarkDebugLevelLogger/Package.Info-11        1474888               838.2 ns/op           440 B/op          9 allocs/op
-BenchmarkDebugLevelLogger/Direct.MergeTwoMaps-11                 1470980               815.6 ns/op           112 B/op            7 allocs/op
-BenchmarkWithBaseFieldsLogger/Direct.Info-11                     1401432               854.2 ns/op            96 B/op            5 allocs/op
-BenchmarkWithBaseFieldsLogger/Package.Info-11                    1264999               948.7 ns/op           440 B/op            9 allocs/op
-BenchmarkWithBaseFieldsLogger/Direct.MergeTwoMaps-11             1246974               962.4 ns/op           112 B/op            7 allocs/op
-BenchmarkCustomTimeFormatLogger/Direct.Info-11                   1494142               801.8 ns/op            96 B/op            5 allocs/op
-BenchmarkCustomTimeFormatLogger/Package.Info-11                  1338704               900.4 ns/op           440 B/op            9 allocs/op
-BenchmarkCustomTimeFormatLogger/Direct.MergeTwoMaps-11           1319662               910.7 ns/op           112 B/op            7 allocs/op
+BenchmarkDefaultLogger/Direct.Info-11    1686820               709.2 ns/op            96 B/op          5 allocs/op
+BenchmarkDefaultLogger/Package.Info-11           1502918               798.1 ns/op           440 B/op          9 allocs/op
+BenchmarkDefaultLogger/Direct.MergeTwoMaps-11    1485727               809.9 ns/op           112 B/op          7 allocs/op
+BenchmarkDebugLevelLogger/Direct.Info-11         1711009               701.3 ns/op            96 B/op          5 allocs/op
+BenchmarkDebugLevelLogger/Package.Info-11        1504086               798.1 ns/op           440 B/op          9 allocs/op
+BenchmarkDebugLevelLogger/Direct.MergeTwoMaps-11                 1479944               809.6 ns/op           112 B/op       7 allocs/op
+BenchmarkWithBaseFieldsLogger/Direct.Info-11                     1411914               850.0 ns/op            96 B/op       5 allocs/op
+BenchmarkWithBaseFieldsLogger/Package.Info-11                    1267008               947.5 ns/op           440 B/op       9 allocs/op
+BenchmarkWithBaseFieldsLogger/Direct.MergeTwoMaps-11             1253274               958.7 ns/op           112 B/op       7 allocs/op
+BenchmarkCustomTimeFormatLogger/Direct.Info-11                   1491144               802.8 ns/op            96 B/op       5 allocs/op
+BenchmarkCustomTimeFormatLogger/Package.Info-11                  1337048               898.4 ns/op           440 B/op       9 allocs/op
+BenchmarkCustomTimeFormatLogger/Direct.MergeTwoMaps-11           1318813               908.7 ns/op           112 B/op       7 allocs/op
 PASS
+ok      github.com/KostLabs/golog       16.440s
 ```
 
 How to reproduce locally:
