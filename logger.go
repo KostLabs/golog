@@ -44,7 +44,11 @@ type Logger interface {
 	Debug(msg string, additionalFields ...map[string]any)
 }
 
-var logger Logger
+// logger is the package-level logger used by the helper functions. Install a
+// custom logger with SetLogger. By default we initialize a sensible
+// JSON logger so package helpers (Info/Warn/Error/Debug) are usable without
+// explicit installation.
+var logger Logger = NewJSONLogger()
 
 // SetLogger installs a global Logger used by the package-level helpers. Call
 // this from your application's bootstrap to route package-level logging calls
