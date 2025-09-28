@@ -21,41 +21,84 @@ API ergonomic.
 
 ## Quick start
 
-Create and use a `JSONLogger` directly:
+The package exposes helpers (`golog.Info`, `golog.Debug`, etc.) for callers
+that don't want to hold a logger reference. For convenience the package
+installs a default `JSONLogger` on import, so package-level helpers work
+out-of-the-box and write to stdout using sensible defaults. If you need to
+customize behavior, create a logger and call `SetLogger` to replace the
+default.
+
+### JSON Logger
+
+`JSONLogger` can be used either as a standalone instance (call methods on the
+returned logger) or installed as the package-level logger so package helpers
+(`golog.Info`, `golog.Debug`, etc.) forward to it. The examples below show
+both patterns.
+
+Defaults for `NewJSONLogger`:
+- Info log level
+- Output to `os.Stdout`
+- No base fields
+- Timestamp in RFC3339Nano format
+
+Example — use package-level helpers with defaults (no setup):
 
 ```go
 package main
 
 import (
-		"io"
-		"os"
-
-		"github.com/KostLabs/golog"
+	"github.com/KostLabs/golog"
 )
 
 func main() {
-		// Simple logger with defaults (Info level, os.Stdout)
-		jl := golog.NewJSONLogger()
+	// Optional: define details with map[string]any type to avoid repeating
+	// the type in every log
+	type details map[string]any
 
-		// Write an entry directly
-		jl.Info("user created", map[string]any{"user_id": 123})
-
-		// Create a logger with options (debug level, discard output, base fields)
-		jl2 := golog.NewJSONLoggerWithOptions(
-				golog.WithLevel(golog.DebugLevel),
-				golog.WithOutput(io.Discard),
-				golog.WithBaseFields(map[string]any{"app": "myapp", "env": "dev"}),
-		)
-
-		jl2.Debug("cache miss", map[string]any{"key": "user:123"})
-
-		// Install a package-level logger so other packages can call golog.Info(...)
-		golog.SetLogger(jl2)
-		golog.Info("service started", map[string]any{"port": 8080})
+	// package-level helpers use a sensible default JSON logger, so this
+	// works without explicit setup.
+	golog.Info("service started", details{"port": 8080})
 }
 ```
 
-API note: you can pass zero or more `map[string]any` maps to the logging
+`NewJSONLoggerWithOptions` allows to define the options you would like to override.
+
+- `WithLevel` - set minimum log level (debug, info, warn, error).
+- `WithOutput` - change the destination (stdout, file, buffer).
+- `WithBaseFields` / `WithBaseField` - fields that are included on every log
+	entry.
+- `WithCustomTimeFormat` - change timestamp formatting for the `timestamp`
+	field (defaults to RFC3339Nano).
+
+
+Example — create a configured logger with self-defined options and install it
+as the repo-level logger:
+
+```go
+package main
+
+import (
+	"io"
+	"github.com/KostLabs/golog"
+)
+
+func main() {
+	type details map[string]any
+
+	jl := golog.NewJSONLoggerWithOptions(
+		golog.WithLevel(golog.DebugLevel),
+		golog.WithOutput(io.Discard),
+		golog.WithBaseField("service", "payments"),
+	)
+	golog.SetLogger(jl)
+
+	// Now package-level helpers forward to the installed logger
+	golog.Info("service started", details{"port": 8080})
+	golog.Debug("cache miss", details{"key": "user:123"})
+}
+```
+
+**API note**: you can pass zero or more `map[string]any` maps to the logging
 methods; they are merged into the emitted JSON object (later maps override
 earlier ones).
 
@@ -103,14 +146,14 @@ jl := NewJSONLoggerWithOptions(
 	repeated allocations for temporary buffers.
 - Map pooling: temporary maps used to merge base fields and provided maps are
 	also pooled to reduce allocations.
-- Fast encoder: `coder.go` provides a fast, reflection-free encoder for
+- Fast encoder: `encoder.go` provides a fast, reflection-free encoder for
 	common types (strings, numbers, bool, time.Time, `map[string]any` and
 	`[]any`). The logger tries the fast encoder first and falls back to a
-	reflect-based marshaler (also provided in `coder.go`) for values that the
+	reflect-based marshaler (provided in `marshal.go`) for values that the
 	fast path doesn't support. This gives predictable performance while
 	remaining correct for arbitrary types.
 
-## Benchmarks (representative)
+## Benchmarks
 
 Benchmarks were run on macOS/arm64 (Apple M3 Pro). These are representative
 results from repository benchmarks; your hardware and Go version will
@@ -124,19 +167,20 @@ goos: darwin
 goarch: arm64
 pkg: github.com/KostLabs/golog
 cpu: Apple M3 Pro
-BenchmarkDefaultLogger/Direct.Info-11    1696510               704.4 ns/op            96 B/op          5 allocs/op
-BenchmarkDefaultLogger/Package.Info-11           1497908               800.0 ns/op           440 B/op          9 allocs/op
-BenchmarkDefaultLogger/Direct.MergeTwoMaps-11    1484871               809.3 ns/op           112 B/op          7 allocs/op
-BenchmarkDebugLevelLogger/Direct.Info-11         1715218               700.9 ns/op            96 B/op          5 allocs/op
-BenchmarkDebugLevelLogger/Package.Info-11        1474888               838.2 ns/op           440 B/op          9 allocs/op
-BenchmarkDebugLevelLogger/Direct.MergeTwoMaps-11                 1470980               815.6 ns/op           112 B/op            7 allocs/op
-BenchmarkWithBaseFieldsLogger/Direct.Info-11                     1401432               854.2 ns/op            96 B/op            5 allocs/op
-BenchmarkWithBaseFieldsLogger/Package.Info-11                    1264999               948.7 ns/op           440 B/op            9 allocs/op
-BenchmarkWithBaseFieldsLogger/Direct.MergeTwoMaps-11             1246974               962.4 ns/op           112 B/op            7 allocs/op
-BenchmarkCustomTimeFormatLogger/Direct.Info-11                   1494142               801.8 ns/op            96 B/op            5 allocs/op
-BenchmarkCustomTimeFormatLogger/Package.Info-11                  1338704               900.4 ns/op           440 B/op            9 allocs/op
-BenchmarkCustomTimeFormatLogger/Direct.MergeTwoMaps-11           1319662               910.7 ns/op           112 B/op            7 allocs/op
+BenchmarkDefaultLogger/Direct.Info-11    1686820               709.2 ns/op            96 B/op          5 allocs/op
+BenchmarkDefaultLogger/Package.Info-11           1502918               798.1 ns/op           440 B/op          9 allocs/op
+BenchmarkDefaultLogger/Direct.MergeTwoMaps-11    1485727               809.9 ns/op           112 B/op          7 allocs/op
+BenchmarkDebugLevelLogger/Direct.Info-11         1711009               701.3 ns/op            96 B/op          5 allocs/op
+BenchmarkDebugLevelLogger/Package.Info-11        1504086               798.1 ns/op           440 B/op          9 allocs/op
+BenchmarkDebugLevelLogger/Direct.MergeTwoMaps-11                 1479944               809.6 ns/op           112 B/op       7 allocs/op
+BenchmarkWithBaseFieldsLogger/Direct.Info-11                     1411914               850.0 ns/op            96 B/op       5 allocs/op
+BenchmarkWithBaseFieldsLogger/Package.Info-11                    1267008               947.5 ns/op           440 B/op       9 allocs/op
+BenchmarkWithBaseFieldsLogger/Direct.MergeTwoMaps-11             1253274               958.7 ns/op           112 B/op       7 allocs/op
+BenchmarkCustomTimeFormatLogger/Direct.Info-11                   1491144               802.8 ns/op            96 B/op       5 allocs/op
+BenchmarkCustomTimeFormatLogger/Package.Info-11                  1337048               898.4 ns/op           440 B/op       9 allocs/op
+BenchmarkCustomTimeFormatLogger/Direct.MergeTwoMaps-11           1318813               908.7 ns/op           112 B/op       7 allocs/op
 PASS
+ok      github.com/KostLabs/golog       16.440s
 ```
 
 How to reproduce locally:
@@ -145,23 +189,6 @@ How to reproduce locally:
 cd /path/to/loggerv2
 go test -bench . -benchmem -run '^$'
 ```
-
-
-## When to use the fast encoder or tune further
-
-- If your log values are mostly primitive scalars (strings, ints, booleans)
-	and small maps, the fast encoder provides the best throughput.
-- If you log complex, heavily nested or arbitrary types frequently, the
-	reflect fallback may still dominate CPU/allocs. In that case, prefer
-	logging well-known scalar fields or structs (or add MarshalJSON on types
-	you control) to reduce reflection cost.
-
-Suggested next steps if you need more speed:
-
-- Avoid logging large or deep structures directly.
-- Emit typed, compact fields instead of large maps when possible.
-- Consider rendering timestamps as integers (UnixNano) if string formatting
-	overhead matters.
 
 ## Contributing
 
