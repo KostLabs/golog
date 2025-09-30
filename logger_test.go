@@ -7,6 +7,23 @@ import (
 	"testing"
 )
 
+// BLogger is a simple implementation of Logger used by tests to verify
+// SetLogger forwards package-level helper calls.
+type BLogger struct{ b *bytes.Buffer }
+
+func (b *BLogger) Info(msg string, additionalFields ...map[string]any) {
+	b.b.WriteString("I:" + msg + "\n")
+}
+func (b *BLogger) Warn(msg string, additionalFields ...map[string]any) {
+	b.b.WriteString("W:" + msg + "\n")
+}
+func (b *BLogger) Error(msg string, additionalFields ...map[string]any) {
+	b.b.WriteString("E:" + msg + "\n")
+}
+func (b *BLogger) Debug(msg string, additionalFields ...map[string]any) {
+	b.b.WriteString("D:" + msg + "\n")
+}
+
 func TestLoggerWithInfo(t *testing.T) {
 	// Given
 	type details map[string]any
@@ -136,6 +153,79 @@ func TestLoggerWithDebug(t *testing.T) {
 		if _, ok := levels[want]; !ok {
 			t.Fatalf("expected %s to be present for level DEBUG", want)
 		}
+	}
+}
+
+func TestLoggerWithoutDetails(t *testing.T) {
+	// Given
+	buf := &bytes.Buffer{}
+	jl := NewJSONLoggerWithOptions(
+		WithLevel(InfoLevel),
+		WithOutput(buf),
+		WithBaseFields(map[string]any{
+			"app": "testapp",
+			"env": "test",
+		}),
+	)
+
+	// When
+	jl.Info("info message without details")
+	jl.Warn("warn message without details")
+	jl.Error("error message without details")
+	jl.Debug("debug message without details")
+
+	// Then
+	levels := collectLevelsFromBuffer(buf)
+	// expect info, warn, error (debug suppressed)
+	if _, ok := levels["info"]; !ok {
+		t.Fatalf("expected info to be present for level INFO")
+	}
+	if _, ok := levels["warn"]; !ok {
+		t.Fatalf("expected warn to be present for level INFO")
+	}
+}
+
+func TestWithBaseFieldAndFieldsMerge(t *testing.T) {
+	buf := &bytes.Buffer{}
+	jl := NewJSONLoggerWithOptions(
+		WithLevel(InfoLevel),
+		WithOutput(buf),
+		WithBaseField("service", "svc"),
+	)
+
+	jl.Info("hi", map[string]any{"service": "override", "x": 1})
+	var m map[string]any
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if err := json.Unmarshal([]byte(lines[0]), &m); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if m["service"] != "override" {
+		t.Fatalf("expected service overridden to 'override', got %v", m["service"])
+	}
+	if m["x"] == nil {
+		t.Fatalf("expected x to be present")
+	}
+}
+
+func TestSetLoggerForwards(t *testing.T) {
+	// Save previous logger and restore
+	prev := logger
+	defer SetLogger(prev)
+
+	buf := &bytes.Buffer{}
+	bl := &BLogger{b: buf}
+	SetLogger(bl)
+	Info("one")
+	Warn("two")
+	Error("three")
+	Debug("four")
+
+	out := strings.TrimSpace(buf.String())
+	if out == "" {
+		t.Fatalf("expected buffer to contain forwarded messages")
+	}
+	if !strings.Contains(out, "I:one") || !strings.Contains(out, "W:two") || !strings.Contains(out, "E:three") || !strings.Contains(out, "D:four") {
+		t.Fatalf("unexpected forwarded content: %s", out)
 	}
 }
 
