@@ -1,6 +1,6 @@
-# GoLogger
+# golog
 
-GoLogger is a small, efficient, structured JSON logger for Go programs. It's
+`golog` is a small, efficient, structured JSON logger for Go programs. It's
 designed to be easy to integrate into applications: create a logger, add a
 couple of base fields and use package-level helpers (or keep a logger
 reference). The library favors low allocations and provides a fast internal
