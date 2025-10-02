@@ -71,6 +71,12 @@ go test -bench=BenchmarkAllLoggers -benchmem -run='^$'
 
 ## Usage
 
+### Installation
+
+```bash
+go get github.com/KostLabs/golog
+```
+
 ### Simple Usage (Zero Configuration)
 
 ```go
