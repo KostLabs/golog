@@ -119,7 +119,6 @@ func (jsonLogger *JSONLogger) log(logLevel Level, levelString, message string, k
 		timeFormat = time.RFC3339Nano
 	}
 
-	// Write JSON directly to buffer - optimized path
 	buffer.WriteByte('{')
 
 	// Write timestamp
@@ -153,12 +152,12 @@ func (jsonLogger *JSONLogger) log(logLevel Level, levelString, message string, k
 		}
 		for fieldKey, fieldValue := range keyValueMap {
 			buffer.WriteByte(',')
-			// Fast inline key normalization - avoid function call
 			if len(fieldKey) > 0 && (fieldKey[0] == '"' || fieldKey[0] == '\'' || fieldKey[len(fieldKey)-1] == ':') {
 				fastQuote(buffer, normalizeKeyInline(fieldKey))
 			} else {
 				fastQuote(buffer, fieldKey)
 			}
+
 			buffer.WriteByte(':')
 			if !encodeValue(buffer, fieldValue) {
 				fastQuote(buffer, "<unsupported>")
@@ -178,7 +177,6 @@ func (jsonLogger *JSONLogger) log(logLevel Level, levelString, message string, k
 
 // normalizeKeyInline performs key normalization without allocation when possible
 func normalizeKeyInline(keyString string) string {
-	// Fast path for common cases
 	if len(keyString) <= 2 {
 		return keyString
 	}
@@ -209,7 +207,7 @@ func normalizeKeyInline(keyString string) string {
 	}
 
 	if startIndex == 0 && endIndex == len(keyString) {
-		return keyString // No change needed
+		return keyString
 	}
 
 	return keyString[startIndex:endIndex]
