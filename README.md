@@ -10,8 +10,6 @@ Most of the famour Go loggers either have complex API's and poor performance (Lo
 
 The solution is `golog`. An intuitive, developer-friendly structured logger with minimal configuration and zero dependnencies. It is designed to be fast, efficient and easily maintainable. If maintainer will stop maintaining it, it will be easy for community to fork and continue the maintenance.
 
-Additionally it offers human-friendly API, flexible output formats (standard, pretty JSON), built-in key normalization and error handling.
-
 ## Benefits
 
 Main benefits in front of most popular loggers like Zap, Zerolog, Slog, Logrus and Apex Log are:
@@ -20,7 +18,6 @@ Main benefits in front of most popular loggers like Zap, Zerolog, Slog, Logrus a
 - **Developer-Friendly API** - no need for wrappers or chaining
 - **Built-in key normalization** - handles common key formatting issues
 - **Built-in error handling** - automatic fallbacks for unsupported types
-- **Multiple output formats** - standard JSON, pretty JSON, compact JSON
 
 ## Benchmarks
 
@@ -32,30 +29,31 @@ goos: darwin
 goarch: arm64
 pkg: benchmarks
 cpu: Apple M3 Pro
-BenchmarkGologInfo-11                    7844247               145.1 ns/op            32 B/op          1 allocs/op
-BenchmarkSlogInfo-11                     5131329               233.2 ns/op            48 B/op          3 allocs/op
-BenchmarkZerologInfo-11                 45882885                24.98 ns/op            0 B/op          0 allocs/op
-BenchmarkZapInfo-11                     20638976                59.24 ns/op           32 B/op          1 allocs/op
-BenchmarkApexInfo-11                     1584324               756.4 ns/op           216 B/op          4 allocs/op
-BenchmarkLogrusInfo-11                    816307              1384 ns/op             871 B/op         19 allocs/op
-BenchmarkGologInfoWithFields-11          4954791               250.2 ns/op           381 B/op          5 allocs/op
-BenchmarkSlogInfoWithFields-11           4479103               265.0 ns/op            48 B/op          3 allocs/op
-BenchmarkZerologInfoWithFields-11       38103000                30.04 ns/op            0 B/op          0 allocs/op
-BenchmarkZapInfoWithFields-11            9110072               131.4 ns/op           225 B/op          2 allocs/op
-BenchmarkApexInfoWithFields-11            715658              1551 ns/op            1185 B/op         16 allocs/op
-BenchmarkLogrusInfoWithFields-11          466314              2500 ns/op            1818 B/op         29 allocs/op
-BenchmarkAllLoggersSimple/Golog-11       8325763               139.2 ns/op            32 B/op          1 allocs/op
-BenchmarkAllLoggersSimple/Slog-11        5184996               232.5 ns/op            48 B/op          3 allocs/op
-BenchmarkAllLoggersSimple/Zerolog-11    38801517                28.28 ns/op            0 B/op          0 allocs/op
-BenchmarkAllLoggersSimple/Zap-11        20168942                60.25 ns/op           32 B/op          1 allocs/op
-BenchmarkAllLoggersSimple/Apex-11        1541712               788.2 ns/op           216 B/op          4 allocs/op
-BenchmarkAllLoggersSimple/Logrus-11       820881              1400 ns/op             871 B/op         19 allocs/op
-BenchmarkAllLoggersWithFields/Golog-11           4722756               260.1 ns/op           381 B/op          5 allocs/op
-BenchmarkAllLoggersWithFields/Slog-11            4476350               267.3 ns/op            48 B/op          3 allocs/op
-BenchmarkAllLoggersWithFields/Zerolog-11        33964786                34.67 ns/op            0 B/op          0 allocs/op
-BenchmarkAllLoggersWithFields/Zap-11             8598110               140.3 ns/op           225 B/op          2 allocs/op
-BenchmarkAllLoggersWithFields/Apex-11             704889              1554 ns/op            1185 B/op         16 allocs/op
-BenchmarkAllLoggersWithFields/Logrus-11           462268              2512 ns/op            1819 B/op         29 allocs/op
+BenchmarkGologInfo-11                   10787295                98.81 ns/op           32 B/op          1 allocs/op
+BenchmarkSlogInfo-11                     6639040               177.9 ns/op            48 B/op          3 allocs/op
+BenchmarkZerologInfo-11                 55121190                22.05 ns/op            0 B/op          0 allocs/op
+BenchmarkZapInfo-11                     25555386                50.07 ns/op           32 B/op          1 allocs/op
+BenchmarkApexInfo-11                     1887244               635.8 ns/op           216 B/op          4 allocs/op
+BenchmarkLogrusInfo-11                   1000000              1153 ns/op             871 B/op         19 allocs/op
+BenchmarkGologInfoWithFields-11          8724242               138.8 ns/op            32 B/op          1 allocs/op
+BenchmarkSlogInfoWithFields-11           5579796               211.8 ns/op            48 B/op          3 allocs/op
+BenchmarkZerologInfoWithFields-11       45540942                27.98 ns/op            0 B/op          0 allocs/op
+BenchmarkZapInfoWithFields-11           10817554               112.5 ns/op           225 B/op          2 allocs/op
+BenchmarkApexInfoWithFields-11            911013              1305 ns/op            1185 B/op         16 allocs/op
+BenchmarkLogrusInfoWithFields-11          587426              2052 ns/op            1818 B/op         29 allocs/op
+BenchmarkAllLoggersSimple/Golog-11      12999956                95.38 ns/op           32 B/op          1 allocs/op
+BenchmarkAllLoggersSimple/Slog-11        6552628               179.9 ns/op            48 B/op          3 allocs/op
+BenchmarkAllLoggersSimple/Zerolog-11    47501157                24.50 ns/op            0 B/op          0 allocs/op
+BenchmarkAllLoggersSimple/Zap-11        24266036                49.28 ns/op           32 B/op          1 allocs/op
+BenchmarkAllLoggersSimple/Apex-11        1887097               634.9 ns/op           216 B/op          4 allocs/op
+BenchmarkAllLoggersSimple/Logrus-11      1000000              1145 ns/op             871 B/op         19 allocs/op
+BenchmarkAllLoggersWithFields/Golog-11           8321142               143.3 ns/op            32 B/op          1 allocs/op
+BenchmarkAllLoggersWithFields/Slog-11            5540938               213.9 ns/op            48 B/op          3 allocs/op
+BenchmarkAllLoggersWithFields/Zerolog-11        42203119                27.83 ns/op            0 B/op          0 allocs/op
+BenchmarkAllLoggersWithFields/Zap-11            10580373               115.0 ns/op           225 B/op          2 allocs/op
+BenchmarkAllLoggersWithFields/Apex-11             898755              1322 ns/op            1185 B/op         16 allocs/op
+BenchmarkAllLoggersWithFields/Logrus-11           585775              2068 ns/op            1819 B/op         29 allocs/op
+PASS
 ```
 
 Run the following commands to see the benchmarks:
@@ -66,7 +64,7 @@ git clone https://github.com/KostLabs/golog
 cd golog/benchmarks
 
 # Run comparative benchmarks
-go test -bench=BenchmarkAllLoggers -benchmem -run='^$'
+go test -bench . -benchmem -run='^$'
 ```
 
 ## Usage
@@ -85,9 +83,9 @@ package main
 import "github.com/KostLabs/golog"
 
 func main() {
-	type fields map[string]any // optional type alias for convenience
+	// Optional type alias for convenience
+	type fields map[string]any
 
-	// Works immediately - no setup required!
 	golog.Info("service started", fields{"port": 8080})
 	golog.Error("connection failed", fields{
 		"host":       "db.example.com",
@@ -98,7 +96,7 @@ func main() {
 
 ### Advanced Configuration
 
-`golog` offers advanced configuration options with methods like `WithLevel`, `WithOutput`, `WithBaseField`, `WithPrettyJSON`, and `WithCustomTimeFormat`. The methods can be chained for a fluent configuration experience.
+`golog` offers advanced configuration options with methods like `WithLevel`, `WithOutput`, `WithBaseField`, `WithBaseFields` and `WithCustomTimeFormat`. The methods can be chained for a fluent configuration experience.
 
 #### Example - Basic Custom Logger with Debug Log Level & Custom Output
 
@@ -111,17 +109,16 @@ import (
 )
 
 func main() {
-    // Create a basic custom logger
+	// Optional type alias for convenience
+	type fields map[string]any
+
     logger := golog.NewJSONLoggerWithOptions(
         golog.WithLevel(golog.DebugLevel),
         golog.WithOutput(os.Stdout),
     )
 
-    // Set as global logger
     golog.SetLogger(logger)
-
-    // Now all package-level calls use your configuration
-    golog.Info("payment processed", map[string]any{
+    golog.Info("payment processed", fields{
         "user_id": 12345,
         "amount": 99.99,
         "currency": "USD",
@@ -140,13 +137,17 @@ import (
 )
 
 func main() {
-    // Create a highly customized logger
+	// Optional type alias for convenience
+	type fields map[string]any
     logger := golog.NewJSONLoggerWithOptions(
         golog.WithLevel(golog.DebugLevel),
         golog.WithOutput(os.Stderr),
-        golog.WithBaseField("service", "payment-api"),
-        golog.WithBaseField("version", "1.2.3"),
-        golog.WithPrettyJSON("  "), // Pretty formatting
+        golog.WithBaseFields(
+			fields{
+				"service": "payment-api",
+				"version": "1.2.3",
+			},
+		),
         golog.WithCustomTimeFormat("2006-01-02 15:04:05"),
     )
     
@@ -154,7 +155,7 @@ func main() {
     golog.SetLogger(logger)
     
     // Now all package-level calls use your configuration
-    golog.Info("payment processed", map[string]any{
+    golog.Info("payment processed", fields{
         "user_id": 12345,
         "amount": 99.99,
         "currency": "USD",

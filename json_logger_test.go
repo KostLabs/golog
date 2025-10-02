@@ -32,10 +32,6 @@ func TestNewJSONLoggerWithDefaults(t *testing.T) {
 		t.Error("expected bufferPool to have a New function, got nil")
 	}
 
-	if jl.writer == nil {
-		t.Error("expected writer to be initialized, got nil")
-	}
-
 	if jl.timeFormat != time.RFC3339Nano {
 		t.Errorf("expected default timeFormat to be RFC3339Nano, got %s", jl.timeFormat)
 	}
@@ -106,55 +102,6 @@ func TestNewJSONLoggerWithOptions(t *testing.T) {
 
 	if jl.timeFormat != time.RFC1123Z {
 		t.Errorf("expected timeFormat to be RFC1123Z, got %s", jl.timeFormat)
-	}
-}
-
-func TestWithLogWriterNil(t *testing.T) {
-	// Given
-	originalWriter := NewJSONLogWriter()
-	jl := &JSONLogger{writer: originalWriter}
-
-	// When
-	WithLogWriter(nil)(jl)
-
-	// Then
-	if jl.writer != originalWriter {
-		t.Errorf("expected writer to remain unchanged when nil is passed, got %v", jl.writer)
-	}
-}
-
-func TestWithPrettyJSON(t *testing.T) {
-	// Given
-	indent := "    "
-	jl := NewJSONLoggerWithOptions(WithPrettyJSON(indent))
-
-	// When
-	// (no action needed, as we're testing pretty JSON setting)
-
-	// Then
-	prettyWriter, ok := jl.writer.(*PrettyJSONLogWriter)
-	if !ok {
-		t.Errorf("expected writer to be PrettyJSONLogWriter, got %T", jl.writer)
-	}
-	if prettyWriter.indent != indent {
-		t.Errorf("expected indent to be %q, got %q", indent, prettyWriter.indent)
-	}
-}
-
-func TestWithPrettyJSONDefaultIndent(t *testing.T) {
-	// Given
-	jl := NewJSONLoggerWithOptions(WithPrettyJSON(""))
-
-	// When
-	// (no action needed, as we're testing default indent)
-
-	// Then
-	prettyWriter, ok := jl.writer.(*PrettyJSONLogWriter)
-	if !ok {
-		t.Errorf("expected writer to be PrettyJSONLogWriter, got %T", jl.writer)
-	}
-	if prettyWriter.indent != "  " {
-		t.Errorf("expected default indent to be '  ', got %q", prettyWriter.indent)
 	}
 }
 
@@ -229,29 +176,5 @@ func TestJSONLoggerIntegration(t *testing.T) {
 	}
 	if !strings.Contains(output, `"level":"info"`) {
 		t.Errorf("expected output to contain level field, got %s", output)
-	}
-}
-
-func TestPrettyJSONLoggerIntegration(t *testing.T) {
-	// Given
-	buf := &bytes.Buffer{}
-	jl := NewJSONLoggerWithOptions(
-		WithLevel(InfoLevel),
-		WithOutput(buf),
-		WithPrettyJSON("  "),
-		WithBaseField("service", "test"),
-	)
-
-	// When
-	jl.Info("test message", map[string]any{"key": "value"})
-
-	// Then
-	output := buf.String()
-	// Check for pretty formatting (newlines and indentation)
-	if !strings.Contains(output, "{\n") {
-		t.Errorf("expected pretty JSON to contain newlines and braces, got %s", output)
-	}
-	if !strings.Contains(output, `  "service": "test"`) {
-		t.Errorf("expected pretty JSON to contain indented service field, got %s", output)
 	}
 }

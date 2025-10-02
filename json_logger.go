@@ -26,7 +26,6 @@ type JSONLogger struct {
 	level      Level
 	mutex      sync.Mutex
 	bufferPool sync.Pool
-	writer     LogWriter
 	// timeFormat controls how timestamps are rendered. Defaults to
 	// time.RFC3339Nano but can be changed with WithCustomTimeFormat.
 	timeFormat string
@@ -44,7 +43,6 @@ func NewJSONLogger() *JSONLogger {
 		output:     os.Stdout,
 		baseFields: make(map[string]any),
 		level:      InfoLevel,
-		writer:     NewJSONLogWriter(),
 		timeFormat: time.RFC3339Nano,
 		bufferPool: sync.Pool{
 			New: func() any {
@@ -58,92 +56,161 @@ func NewJSONLogger() *JSONLogger {
 // NewJSONLoggerWithOptions creates a logger and applies functional options.
 // Use the Option helpers WithLevel, WithOutput, WithBaseFields and
 // WithBaseField to configure the logger.
-func NewJSONLoggerWithOptions(opts ...Option) *JSONLogger {
-	jl := NewJSONLogger()
-	for _, opt := range opts {
-		opt(jl)
+func NewJSONLoggerWithOptions(options ...Option) *JSONLogger {
+	jsonLogger := NewJSONLogger()
+	for _, option := range options {
+		option(jsonLogger)
 	}
 
-	return jl
+	return jsonLogger
 }
 
 // WithLevel sets the minimum level for the logger. Logs with lower severity
 // than the configured level are dropped.
-func WithLevel(l Level) Option {
-	return func(jl *JSONLogger) { jl.level = l }
+func WithLevel(logLevel Level) Option {
+	return func(jsonLogger *JSONLogger) { jsonLogger.level = logLevel }
 }
 
 // WithOutput sets the writer for the logger (stdout, file, buffer, etc.).
-func WithOutput(w io.Writer) Option {
-	return func(jl *JSONLogger) { jl.output = w }
+func WithOutput(writer io.Writer) Option {
+	return func(jsonLogger *JSONLogger) { jsonLogger.output = writer }
 }
 
 // WithBaseFields adds the provided fields to the logger's base fields. These
 // fields are included in every emitted log entry.
 func WithBaseFields(fields map[string]any) Option {
-	return func(jl *JSONLogger) {
-		for k, v := range fields {
-			jl.baseFields[k] = v
+	return func(jsonLogger *JSONLogger) {
+		for key, value := range fields {
+			jsonLogger.baseFields[key] = value
 		}
 	}
 }
 
 // WithBaseField adds a single base field key/value that will be included in
 // every log entry.
-func WithBaseField(k string, v any) Option {
-	return func(jl *JSONLogger) { jl.baseFields[k] = v }
+func WithBaseField(key string, value any) Option {
+	return func(jsonLogger *JSONLogger) { jsonLogger.baseFields[key] = value }
 }
 
 // WithCustomTimeFormat sets a custom time format for the timestamp field.
 // If not set, the logger uses RFC3339Nano.
-func WithCustomTimeFormat(format string) Option {
-	return func(jl *JSONLogger) {
-		if format == "" {
+func WithCustomTimeFormat(timeFormat string) Option {
+	return func(jsonLogger *JSONLogger) {
+		if timeFormat == "" {
 			return
 		}
 
-		jl.timeFormat = format
-	}
-}
-
-// WithLogWriter sets a custom LogWriter implementation for the logger.
-// This allows you to customize the output format (e.g., pretty JSON, compact JSON).
-func WithLogWriter(writer LogWriter) Option {
-	return func(jl *JSONLogger) {
-		if writer != nil {
-			jl.writer = writer
-		}
-	}
-}
-
-// WithPrettyJSON configures the logger to use pretty-formatted JSON output.
-func WithPrettyJSON(indent string) Option {
-	return func(jl *JSONLogger) {
-		jl.writer = NewPrettyJSONLogWriter(indent)
+		jsonLogger.timeFormat = timeFormat
 	}
 }
 
 // log builds a JSON object from baseFields + message fields and writes it.
-func (jl *JSONLogger) log(lv Level, levelStr, msg string, keyValuePairs ...map[string]any) {
-	if lv < jl.level {
+func (jsonLogger *JSONLogger) log(logLevel Level, levelString, message string, keyValuePairs ...map[string]any) {
+	if logLevel < jsonLogger.level {
 		return
 	}
 
-	buf := jl.bufferPool.Get().(*bytes.Buffer)
-	buf.Reset()
+	buffer := jsonLogger.bufferPool.Get().(*bytes.Buffer)
+	buffer.Reset()
 
 	// Use configured time format
-	tf := jl.timeFormat
-	if tf == "" {
-		tf = time.RFC3339Nano
+	timeFormat := jsonLogger.timeFormat
+	if timeFormat == "" {
+		timeFormat = time.RFC3339Nano
 	}
 
-	// Use the LogWriter to write the log entry
-	jl.writer.WriteLogEntry(buf, time.Now(), tf, levelStr, msg, jl.baseFields, keyValuePairs...)
+	// Write JSON directly to buffer - optimized path
+	buffer.WriteByte('{')
 
-	// Write to output with minimal locking
-	jl.mutex.Lock()
-	_, _ = jl.output.Write(buf.Bytes())
-	jl.mutex.Unlock()
-	jl.bufferPool.Put(buf)
+	// Write timestamp
+	buffer.WriteString(`"timestamp":"`)
+	buffer.WriteString(time.Now().UTC().Format(timeFormat))
+	buffer.WriteByte('"')
+
+	// Write level
+	buffer.WriteString(`,"level":"`)
+	buffer.WriteString(levelString)
+	buffer.WriteByte('"')
+
+	// Write message
+	buffer.WriteString(`,"message":`)
+	fastQuote(buffer, message)
+
+	// Write base fields directly (optimized)
+	for fieldKey, fieldValue := range jsonLogger.baseFields {
+		buffer.WriteByte(',')
+		fastQuote(buffer, fieldKey)
+		buffer.WriteByte(':')
+		if !encodeValue(buffer, fieldValue) {
+			fastQuote(buffer, "<unsupported>")
+		}
+	}
+
+	// Write additional fields directly (optimized)
+	for _, keyValueMap := range keyValuePairs {
+		if keyValueMap == nil {
+			continue
+		}
+		for fieldKey, fieldValue := range keyValueMap {
+			buffer.WriteByte(',')
+			// Fast inline key normalization - avoid function call
+			if len(fieldKey) > 0 && (fieldKey[0] == '"' || fieldKey[0] == '\'' || fieldKey[len(fieldKey)-1] == ':') {
+				fastQuote(buffer, normalizeKeyInline(fieldKey))
+			} else {
+				fastQuote(buffer, fieldKey)
+			}
+			buffer.WriteByte(':')
+			if !encodeValue(buffer, fieldValue) {
+				fastQuote(buffer, "<unsupported>")
+			}
+		}
+	}
+
+	buffer.WriteByte('}')
+	buffer.WriteByte('\n')
+
+	// Write with minimal locking
+	jsonLogger.mutex.Lock()
+	_, _ = jsonLogger.output.Write(buffer.Bytes())
+	jsonLogger.mutex.Unlock()
+	jsonLogger.bufferPool.Put(buffer)
+}
+
+// normalizeKeyInline performs key normalization without allocation when possible
+func normalizeKeyInline(keyString string) string {
+	// Fast path for common cases
+	if len(keyString) <= 2 {
+		return keyString
+	}
+
+	startIndex := 0
+	endIndex := len(keyString)
+
+	// Trim quotes
+	if keyString[0] == '"' || keyString[0] == '\'' {
+		startIndex++
+	}
+	if endIndex > startIndex && (keyString[endIndex-1] == '"' || keyString[endIndex-1] == '\'') {
+		endIndex--
+	}
+
+	// Trim colon
+	if endIndex > startIndex && keyString[endIndex-1] == ':' {
+		endIndex--
+	}
+
+	// Trim spaces (simple case)
+	for startIndex < endIndex && keyString[startIndex] == ' ' {
+		startIndex++
+	}
+
+	for endIndex > startIndex && keyString[endIndex-1] == ' ' {
+		endIndex--
+	}
+
+	if startIndex == 0 && endIndex == len(keyString) {
+		return keyString // No change needed
+	}
+
+	return keyString[startIndex:endIndex]
 }
