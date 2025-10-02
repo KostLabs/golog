@@ -100,18 +100,6 @@ func (w *JSONLogWriter) writeFields(buf *bytes.Buffer, fields map[string]any) er
 	return nil
 }
 
-// CompactJSONLogWriter is a variant that writes more compact JSON (no spaces).
-type CompactJSONLogWriter struct {
-	*JSONLogWriter
-}
-
-// NewCompactJSONLogWriter creates a compact JSON log writer.
-func NewCompactJSONLogWriter() *CompactJSONLogWriter {
-	return &CompactJSONLogWriter{
-		JSONLogWriter: NewJSONLogWriter(),
-	}
-}
-
 // PrettyJSONLogWriter is a variant that writes prettier JSON with indentation.
 type PrettyJSONLogWriter struct {
 	indent string

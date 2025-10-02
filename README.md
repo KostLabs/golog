@@ -10,7 +10,7 @@ Most of the famour Go loggers either have complex API's and poor performance (Lo
 
 The solution is `golog`. An intuitive, developer-friendly structured logger with minimal configuration and zero dependnencies. It is designed to be fast, efficient and easily maintainable. If maintainer will stop maintaining it, it will be easy for community to fork and continue the maintenance.
 
-Additionally it offers human-friendly API, flexible output formats (standard, pretty, compact JSON), built-in key normalization and error handling.
+Additionally it offers human-friendly API, flexible output formats (standard, pretty JSON), built-in key normalization and error handling.
 
 ## Benefits
 

@@ -109,20 +109,6 @@ func TestNewJSONLoggerWithOptions(t *testing.T) {
 	}
 }
 
-func TestWithLogWriter(t *testing.T) {
-	// Given
-	customWriter := NewCompactJSONLogWriter()
-	jl := NewJSONLoggerWithOptions(WithLogWriter(customWriter))
-
-	// When
-	// (no action needed, as we're testing writer setting)
-
-	// Then
-	if jl.writer != customWriter {
-		t.Errorf("expected writer to be customWriter, got %v", jl.writer)
-	}
-}
-
 func TestWithLogWriterNil(t *testing.T) {
 	// Given
 	originalWriter := NewJSONLogWriter()
@@ -169,20 +155,6 @@ func TestWithPrettyJSONDefaultIndent(t *testing.T) {
 	}
 	if prettyWriter.indent != "  " {
 		t.Errorf("expected default indent to be '  ', got %q", prettyWriter.indent)
-	}
-}
-
-func TestWithCompactJSON(t *testing.T) {
-	// Given
-	jl := NewJSONLoggerWithOptions(WithCompactJSON())
-
-	// When
-	// (no action needed, as we're testing compact JSON setting)
-
-	// Then
-	_, ok := jl.writer.(*CompactJSONLogWriter)
-	if !ok {
-		t.Errorf("expected writer to be CompactJSONLogWriter, got %T", jl.writer)
 	}
 }
 
@@ -281,27 +253,5 @@ func TestPrettyJSONLoggerIntegration(t *testing.T) {
 	}
 	if !strings.Contains(output, `  "service": "test"`) {
 		t.Errorf("expected pretty JSON to contain indented service field, got %s", output)
-	}
-}
-
-func TestCompactJSONLoggerIntegration(t *testing.T) {
-	// Given
-	buf := &bytes.Buffer{}
-	jl := NewJSONLoggerWithOptions(
-		WithLevel(InfoLevel),
-		WithOutput(buf),
-		WithCompactJSON(),
-		WithBaseField("service", "test"),
-	)
-
-	// When
-	jl.Info("test message", map[string]any{"key": "value"})
-
-	// Then
-	output := buf.String()
-	// Should be compact (no extra spaces or newlines except the final one)
-	lines := strings.Split(strings.TrimSpace(output), "\n")
-	if len(lines) != 1 {
-		t.Errorf("expected compact JSON to be on a single line, got %d lines: %s", len(lines), output)
 	}
 }

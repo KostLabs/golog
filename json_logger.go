@@ -123,13 +123,6 @@ func WithPrettyJSON(indent string) Option {
 	}
 }
 
-// WithCompactJSON configures the logger to use compact JSON output.
-func WithCompactJSON() Option {
-	return func(jl *JSONLogger) {
-		jl.writer = NewCompactJSONLogWriter()
-	}
-}
-
 // log builds a JSON object from baseFields + message fields and writes it.
 func (jl *JSONLogger) log(lv Level, levelStr, msg string, keyValuePairs ...map[string]any) {
 	if lv < jl.level {
