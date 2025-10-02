@@ -88,7 +88,7 @@ func main() {
 	// Optional type alias for convenience
 	type fields map[string]any
 
-	golog.Info("service started", fields{"port": 8080})
+	golog.Info("service started")
 	golog.Error("connection failed", fields{
 		"host":       "db.example.com",
 		"retry_count": 3,
