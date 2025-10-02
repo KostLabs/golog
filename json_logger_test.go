@@ -1,7 +1,9 @@
 package golog
 
 import (
+	"bytes"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -29,6 +31,10 @@ func TestNewJSONLoggerWithDefaults(t *testing.T) {
 	if jl.bufferPool.New == nil {
 		t.Error("expected bufferPool to have a New function, got nil")
 	}
+
+	if jl.timeFormat != time.RFC3339Nano {
+		t.Errorf("expected default timeFormat to be RFC3339Nano, got %s", jl.timeFormat)
+	}
 }
 
 func TestNewJSONLoggerWithLevel(t *testing.T) {
@@ -47,9 +53,7 @@ func TestNewJSONLoggerWithLevel(t *testing.T) {
 func TestNewJSONLoggerWithOutput(t *testing.T) {
 	// Given
 	customOutput := os.Stderr
-	jl := NewJSONLoggerWithOptions(func(j *JSONLogger) {
-		j.output = customOutput
-	})
+	jl := NewJSONLoggerWithOptions(WithOutput(customOutput))
 
 	// When
 	// (no action needed, as we're testing output setting)
@@ -98,5 +102,79 @@ func TestNewJSONLoggerWithOptions(t *testing.T) {
 
 	if jl.timeFormat != time.RFC1123Z {
 		t.Errorf("expected timeFormat to be RFC1123Z, got %s", jl.timeFormat)
+	}
+}
+
+func TestWithBaseField(t *testing.T) {
+	// Given
+	key := "service"
+	value := "test-service"
+	jl := NewJSONLoggerWithOptions(WithBaseField(key, value))
+
+	// When
+	// (no action needed, as we're testing base field setting)
+
+	// Then
+	if len(jl.baseFields) != 1 {
+		t.Errorf("expected baseFields to have 1 entry, got %d", len(jl.baseFields))
+	}
+	if jl.baseFields[key] != value {
+		t.Errorf("expected baseFields[%s] to be %v, got %v", key, value, jl.baseFields[key])
+	}
+}
+
+func TestWithCustomTimeFormat(t *testing.T) {
+	// Given
+	customFormat := time.RFC822
+	jl := NewJSONLoggerWithOptions(WithCustomTimeFormat(customFormat))
+
+	// When
+	// (no action needed, as we're testing time format setting)
+
+	// Then
+	if jl.timeFormat != customFormat {
+		t.Errorf("expected timeFormat to be %s, got %s", customFormat, jl.timeFormat)
+	}
+}
+
+func TestWithCustomTimeFormatEmpty(t *testing.T) {
+	// Given
+	originalFormat := time.RFC3339Nano
+	jl := &JSONLogger{timeFormat: originalFormat}
+
+	// When
+	WithCustomTimeFormat("")(jl)
+
+	// Then
+	if jl.timeFormat != originalFormat {
+		t.Errorf("expected timeFormat to remain unchanged when empty string is passed, got %s", jl.timeFormat)
+	}
+}
+
+func TestJSONLoggerIntegration(t *testing.T) {
+	// Given
+	buf := &bytes.Buffer{}
+	jl := NewJSONLoggerWithOptions(
+		WithLevel(DebugLevel),
+		WithOutput(buf),
+		WithBaseField("service", "test"),
+	)
+
+	// When
+	jl.Info("test message", map[string]any{"key": "value"})
+
+	// Then
+	output := buf.String()
+	if !strings.Contains(output, `"service":"test"`) {
+		t.Errorf("expected output to contain service field, got %s", output)
+	}
+	if !strings.Contains(output, `"key":"value"`) {
+		t.Errorf("expected output to contain key field, got %s", output)
+	}
+	if !strings.Contains(output, `"message":"test message"`) {
+		t.Errorf("expected output to contain message field, got %s", output)
+	}
+	if !strings.Contains(output, `"level":"info"`) {
+		t.Errorf("expected output to contain level field, got %s", output)
 	}
 }

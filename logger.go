@@ -10,10 +10,10 @@ package golog
 //	//
 //	// import (
 //	//     "fmt"
-//	//     "your/import/path/stdlib"
+//	//     "github.com/KostLabs/golog"
 //	// )
 //	//
-//	// // MyAdapter adapts application logging to the stdlib.Logger interface.
+//	// // MyAdapter adapts application logging to the golog.Logger interface.
 //	// type MyAdapter struct{}
 //	//
 //	// func (m *MyAdapter) Info(msg string, fields ...map[string]any) {
@@ -31,8 +31,8 @@ package golog
 //	//
 //	// func main() {
 //	//     adapter := &MyAdapter{}
-//	//     stdlib.SetLogger(adapter)
-//	//     stdlib.Info("service started", map[string]any{"port": 8080})
+//	//     golog.SetLogger(adapter)
+//	//     golog.Info("service started", map[string]any{"port": 8080})
 //	// }
 //
 // The above shows a minimal adapter you can use when you want to route
@@ -56,9 +56,9 @@ var logger Logger = NewJSONLogger()
 //
 // Example (installing the provided JSON logger for package-level logging):
 //
-//	// jl := stdlib.NewJSONLogger()
-//	// stdlib.SetLogger(jl)
-//	// stdlib.Info("started", map[string]any{"env": "prod"})
+//	// jl := golog.NewJSONLogger()
+//	// golog.SetLogger(jl)
+//	// golog.Info("started", map[string]any{"env": "prod"})
 //
 // Use `SetLogger` during application initialization so other packages can
 // call the package-level helpers without knowing the concrete logger.
@@ -67,34 +67,34 @@ func SetLogger(l Logger) {
 }
 
 // Package-level helper functions that forward to the installed logger.
-// These allow consumers to call stdlib.Info(...), etc., without holding
+// These allow consumers to call golog.Info(...), etc., without holding
 // an explicit logger reference.
-func Info(msg string, additionalFields ...map[string]any) {
+func Info(message string, additionalFields ...map[string]any) {
 	if logger == nil {
 		return
 	}
-	logger.Info(msg, additionalFields...)
+	logger.Info(message, additionalFields...)
 }
 
-func Warn(msg string, additionalFields ...map[string]any) {
+func Warn(message string, additionalFields ...map[string]any) {
 	if logger == nil {
 		return
 	}
-	logger.Warn(msg, additionalFields...)
+	logger.Warn(message, additionalFields...)
 }
 
-func Error(msg string, additionalFields ...map[string]any) {
+func Error(message string, additionalFields ...map[string]any) {
 	if logger == nil {
 		return
 	}
-	logger.Error(msg, additionalFields...)
+	logger.Error(message, additionalFields...)
 }
 
-func Debug(msg string, additionalFields ...map[string]any) {
+func Debug(message string, additionalFields ...map[string]any) {
 	if logger == nil {
 		return
 	}
-	logger.Debug(msg, additionalFields...)
+	logger.Debug(message, additionalFields...)
 }
 
 // Info logs a message at info level with optional additional fields.
@@ -102,30 +102,30 @@ func Debug(msg string, additionalFields ...map[string]any) {
 //
 // Example:
 //
-//	// jl := stdlib.NewJSONLogger()
-//	// jl.Info("user created", map[string]any{"user_id": 123})
-func (jl *JSONLogger) Info(msg string, additionalFields ...map[string]any) {
-	jl.log(InfoLevel, "info", msg, additionalFields...)
+//	// jsonLogger := golog.NewJSONLogger()
+//	// jsonLogger.Info("user created", map[string]any{"user_id": 123})
+func (jsonLogger *JSONLogger) Info(message string, additionalFields ...map[string]any) {
+	jsonLogger.log(InfoLevel, "info", message, additionalFields...)
 }
 
 // Warn logs a message at warn level with optional additional fields.
 //
 // Example:
 //
-//	// jl := stdlib.NewJSONLogger()
-//	// jl.Warn("high memory usage", map[string]any{"heap_mb": 512})
-func (jl *JSONLogger) Warn(msg string, additionalFields ...map[string]any) {
-	jl.log(WarnLevel, "warn", msg, additionalFields...)
+//	// jsonLogger := golog.NewJSONLogger()
+//	// jsonLogger.Warn("high memory usage", map[string]any{"heap_mb": 512})
+func (jsonLogger *JSONLogger) Warn(message string, additionalFields ...map[string]any) {
+	jsonLogger.log(WarnLevel, "warn", message, additionalFields...)
 }
 
 // Error logs a message at error level with optional additional fields.
 //
 // Example:
 //
-//	// jl := stdlib.NewJSONLogger()
-//	// jl.Error("failed to connect to db", map[string]any{"db": "primary"})
-func (jl *JSONLogger) Error(msg string, additionalFields ...map[string]any) {
-	jl.log(ErrorLevel, "error", msg, additionalFields...)
+//	// jsonLogger := golog.NewJSONLogger()
+//	// jsonLogger.Error("failed to connect to db", map[string]any{"db": "primary"})
+func (jsonLogger *JSONLogger) Error(message string, additionalFields ...map[string]any) {
+	jsonLogger.log(ErrorLevel, "error", message, additionalFields...)
 }
 
 // Debug logs a message at debug level with optional additional fields.
@@ -133,8 +133,8 @@ func (jl *JSONLogger) Error(msg string, additionalFields ...map[string]any) {
 //
 // Example (enable debug by creating the logger with DebugLevel):
 //
-//	// jl := stdlib.NewJSONLoggerWithOptions(WithLevel(DebugLevel))
-//	// jl.Debug("cache miss", map[string]any{"key": "user:123"})
-func (jl *JSONLogger) Debug(msg string, additionalFields ...map[string]any) {
-	jl.log(DebugLevel, "debug", msg, additionalFields...)
+//	// jsonLogger := golog.NewJSONLoggerWithOptions(WithLevel(DebugLevel))
+//	// jsonLogger.Debug("cache miss", map[string]any{"key": "user:123"})
+func (jsonLogger *JSONLogger) Debug(message string, additionalFields ...map[string]any) {
+	jsonLogger.log(DebugLevel, "debug", message, additionalFields...)
 }

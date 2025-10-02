@@ -2,7 +2,6 @@ package golog
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -27,9 +26,6 @@ type JSONLogger struct {
 	level      Level
 	mutex      sync.Mutex
 	bufferPool sync.Pool
-	// mapPool holds reusable maps for building log entries to reduce
-	// allocations when creating temporary maps per log call.
-	mapPool sync.Pool
 	// timeFormat controls how timestamps are rendered. Defaults to
 	// time.RFC3339Nano but can be changed with WithCustomTimeFormat.
 	timeFormat string
@@ -49,10 +45,10 @@ func NewJSONLogger() *JSONLogger {
 		level:      InfoLevel,
 		timeFormat: time.RFC3339Nano,
 		bufferPool: sync.Pool{
-			New: func() any { return &bytes.Buffer{} },
-		},
-		mapPool: sync.Pool{
-			New: func() any { return make(map[string]any, 8) },
+			New: func() any {
+				// Pre-allocate with reasonable capacity to reduce allocations
+				return bytes.NewBuffer(make([]byte, 0, 256))
+			},
 		},
 	}
 }
@@ -60,135 +56,159 @@ func NewJSONLogger() *JSONLogger {
 // NewJSONLoggerWithOptions creates a logger and applies functional options.
 // Use the Option helpers WithLevel, WithOutput, WithBaseFields and
 // WithBaseField to configure the logger.
-func NewJSONLoggerWithOptions(opts ...Option) *JSONLogger {
-	jl := NewJSONLogger()
-	for _, opt := range opts {
-		opt(jl)
+func NewJSONLoggerWithOptions(options ...Option) *JSONLogger {
+	jsonLogger := NewJSONLogger()
+	for _, option := range options {
+		option(jsonLogger)
 	}
 
-	return jl
+	return jsonLogger
 }
 
 // WithLevel sets the minimum level for the logger. Logs with lower severity
 // than the configured level are dropped.
-func WithLevel(l Level) Option {
-	return func(jl *JSONLogger) { jl.level = l }
+func WithLevel(logLevel Level) Option {
+	return func(jsonLogger *JSONLogger) { jsonLogger.level = logLevel }
 }
 
 // WithOutput sets the writer for the logger (stdout, file, buffer, etc.).
-func WithOutput(w io.Writer) Option {
-	return func(jl *JSONLogger) { jl.output = w }
+func WithOutput(writer io.Writer) Option {
+	return func(jsonLogger *JSONLogger) { jsonLogger.output = writer }
 }
 
 // WithBaseFields adds the provided fields to the logger's base fields. These
 // fields are included in every emitted log entry.
 func WithBaseFields(fields map[string]any) Option {
-	return func(jl *JSONLogger) {
-		for k, v := range fields {
-			jl.baseFields[k] = v
+	return func(jsonLogger *JSONLogger) {
+		for key, value := range fields {
+			jsonLogger.baseFields[key] = value
 		}
 	}
 }
 
 // WithBaseField adds a single base field key/value that will be included in
 // every log entry.
-func WithBaseField(k string, v any) Option {
-	return func(jl *JSONLogger) { jl.baseFields[k] = v }
+func WithBaseField(key string, value any) Option {
+	return func(jsonLogger *JSONLogger) { jsonLogger.baseFields[key] = value }
 }
 
 // WithCustomTimeFormat sets a custom time format for the timestamp field.
 // If not set, the logger uses RFC3339Nano.
-func WithCustomTimeFormat(format string) Option {
-	return func(jl *JSONLogger) {
-		if format == "" {
+func WithCustomTimeFormat(timeFormat string) Option {
+	return func(jsonLogger *JSONLogger) {
+		if timeFormat == "" {
 			return
 		}
 
-		jl.timeFormat = format
+		jsonLogger.timeFormat = timeFormat
 	}
 }
 
 // log builds a JSON object from baseFields + message fields and writes it.
-func (jl *JSONLogger) log(lv Level, levelStr, msg string, keyValuePairs ...map[string]any) {
-	if lv < jl.level {
+func (jsonLogger *JSONLogger) log(logLevel Level, levelString, message string, keyValuePairs ...map[string]any) {
+	if logLevel < jsonLogger.level {
 		return
 	}
 
-	// try to reuse a temporary map from the pool to avoid allocating a new
-	// map for each log invocation. Clear it before use and put it back when
-	// finished.
-	m := jl.mapPool.Get().(map[string]any)
-	// clear any previous contents
-	for k := range m {
-		delete(m, k)
-	}
-	// pre-size isn't required because pooled maps will retain capacity.
-	for k, v := range jl.baseFields {
-		m[k] = v
+	buffer := jsonLogger.bufferPool.Get().(*bytes.Buffer)
+	buffer.Reset()
+
+	// Use configured time format
+	timeFormat := jsonLogger.timeFormat
+	if timeFormat == "" {
+		timeFormat = time.RFC3339Nano
 	}
 
-	// use configured time format
-	tf := jl.timeFormat
-	if tf == "" {
-		tf = time.RFC3339Nano
-	}
+	buffer.WriteByte('{')
 
-	m["timestamp"] = time.Now().UTC().Format(tf)
+	// Write timestamp
+	buffer.WriteString(`"timestamp":"`)
+	buffer.WriteString(time.Now().UTC().Format(timeFormat))
+	buffer.WriteByte('"')
 
-	// Keep only a machine-friendly plain `level` field.
-	m["level"] = levelStr
-	m["message"] = msg
+	// Write level
+	buffer.WriteString(`,"level":"`)
+	buffer.WriteString(levelString)
+	buffer.WriteByte('"')
 
-	// merge provided maps into the output map
-	if len(keyValuePairs) > 0 {
-		mergeMaps(m, keyValuePairs...)
-	}
+	// Write message
+	buffer.WriteString(`,"message":`)
+	fastQuote(buffer, message)
 
-	buf := jl.bufferPool.Get().(*bytes.Buffer)
-	buf.Reset()
-
-	// Try fast encoder first; if it cannot handle some type, fall back to
-	// encoding/json which handles all cases.
-	if FastEncode(buf, m) {
-		// ensure newline suffix like json.Encoder.Encode does
-		if buf.Len() == 0 || buf.Bytes()[buf.Len()-1] != '\n' {
-			buf.WriteByte('\n')
+	// Write base fields directly (optimized)
+	for fieldKey, fieldValue := range jsonLogger.baseFields {
+		buffer.WriteByte(',')
+		fastQuote(buffer, fieldKey)
+		buffer.WriteByte(':')
+		if !encodeValue(buffer, fieldValue) {
+			fastQuote(buffer, "<unsupported>")
 		}
-	} else {
-		if err := MarshalToBuffer(buf, m); err != nil {
-			// if marshal fails (unsupported type), write a minimal JSON error
-			jl.mutex.Lock()
-			tf := jl.timeFormat
-			if tf == "" {
-				tf = time.RFC3339Nano
+	}
+
+	// Write additional fields directly (optimized)
+	for _, keyValueMap := range keyValuePairs {
+		if keyValueMap == nil {
+			continue
+		}
+		for fieldKey, fieldValue := range keyValueMap {
+			buffer.WriteByte(',')
+			if len(fieldKey) > 0 && (fieldKey[0] == '"' || fieldKey[0] == '\'' || fieldKey[len(fieldKey)-1] == ':') {
+				fastQuote(buffer, normalizeKeyInline(fieldKey))
+			} else {
+				fastQuote(buffer, fieldKey)
 			}
 
-			if _, writeErr := fmt.Fprintf(jl.output,
-				"{\"timestamp\":\"%s\",\"level\":\"%s\",\"message\":\"%s\",\"error\":\"%s\"}\n",
-				time.Now().UTC().Format(tf), levelStr, msg, err.Error()); writeErr != nil {
-				// best-effort fallback: write write-errors to stderr
-				fmt.Fprintln(os.Stderr, "json logger write error:", writeErr)
+			buffer.WriteByte(':')
+			if !encodeValue(buffer, fieldValue) {
+				fastQuote(buffer, "<unsupported>")
 			}
-
-			jl.mutex.Unlock()
-			jl.bufferPool.Put(buf)
-			return
-		}
-
-		// ensure newline suffix
-		if buf.Len() == 0 || buf.Bytes()[buf.Len()-1] != '\n' {
-			buf.WriteByte('\n')
 		}
 	}
 
-	jl.mutex.Lock()
-	_, _ = jl.output.Write(buf.Bytes())
-	jl.mutex.Unlock()
-	jl.bufferPool.Put(buf)
+	buffer.WriteByte('}')
+	buffer.WriteByte('\n')
 
-	// clear and return the temporary map to the pool
-	for k := range m {
-		delete(m, k)
+	// Write with minimal locking
+	jsonLogger.mutex.Lock()
+	_, _ = jsonLogger.output.Write(buffer.Bytes())
+	jsonLogger.mutex.Unlock()
+	jsonLogger.bufferPool.Put(buffer)
+}
+
+// normalizeKeyInline performs key normalization without allocation when possible
+func normalizeKeyInline(keyString string) string {
+	if len(keyString) <= 2 {
+		return keyString
 	}
-	jl.mapPool.Put(m)
+
+	startIndex := 0
+	endIndex := len(keyString)
+
+	// Trim quotes
+	if keyString[0] == '"' || keyString[0] == '\'' {
+		startIndex++
+	}
+	if endIndex > startIndex && (keyString[endIndex-1] == '"' || keyString[endIndex-1] == '\'') {
+		endIndex--
+	}
+
+	// Trim colon
+	if endIndex > startIndex && keyString[endIndex-1] == ':' {
+		endIndex--
+	}
+
+	// Trim spaces (simple case)
+	for startIndex < endIndex && keyString[startIndex] == ' ' {
+		startIndex++
+	}
+
+	for endIndex > startIndex && keyString[endIndex-1] == ' ' {
+		endIndex--
+	}
+
+	if startIndex == 0 && endIndex == len(keyString) {
+		return keyString
+	}
+
+	return keyString[startIndex:endIndex]
 }

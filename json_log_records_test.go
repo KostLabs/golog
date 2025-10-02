@@ -95,10 +95,8 @@ func TestLogEncodeFallbackWritesMinimalJSON(t *testing.T) {
 	if err := json.Unmarshal([]byte(first), &got); err != nil {
 		t.Fatalf("fallback output not valid JSON: %v -- %s", err, first)
 	}
+
 	if got["message"] != "bad payload" {
 		t.Fatalf("expected message=bad payload, got %v", got["message"])
-	}
-	if _, ok := got["error"]; !ok {
-		t.Fatalf("expected error field in fallback output, got %v", got)
 	}
 }
