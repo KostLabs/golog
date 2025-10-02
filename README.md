@@ -4,11 +4,11 @@
 
 ## Problem
 
-Most of the famour Go loggers either have complex API's and poor performance (Logrus, Apex) or are very fast but have clunky API's and/or external dependencies (Zap, Zerolog). Some of them are not regularly updated or maintained. The ones which are maintained have updates available only in master branch and not in tagged releases, which makes them insecure to use in production.
+Most of the famous Go loggers either have complex API's and poor performance (Logrus, Apex) or are very fast but have clunky API's and/or external dependencies (Zap, Zerolog). Some of them are not regularly updated or maintained. The ones which are maintained have updates available only in master branch and not in tagged releases, which makes them insecure to use in production.
 
 ## Solution
 
-The solution is `golog`. An intuitive, developer-friendly structured logger with minimal configuration and zero dependnencies. It is designed to be fast, efficient and easily maintainable. If maintainer will stop maintaining it, it will be easy for community to fork and continue the maintenance.
+The solution is `golog`. An intuitive, developer-friendly structured logger with minimal configuration and zero dependencies. It is designed to be fast, efficient and easily maintainable. If maintainer will stop maintaining it, it will be easy for community to fork and continue the maintenance.
 
 ## Benefits
 
