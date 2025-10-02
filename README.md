@@ -67,6 +67,8 @@ cd golog/benchmarks
 go test -bench . -benchmem -run='^$'
 ```
 
+The visualized results can be visible on [GitHub Pages](https://kostlabs.github.io/golog/).
+
 ## Usage
 
 ### Installation
