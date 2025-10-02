@@ -2,7 +2,6 @@ package golog
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -27,9 +26,7 @@ type JSONLogger struct {
 	level      Level
 	mutex      sync.Mutex
 	bufferPool sync.Pool
-	// mapPool holds reusable maps for building log entries to reduce
-	// allocations when creating temporary maps per log call.
-	mapPool sync.Pool
+	writer     LogWriter
 	// timeFormat controls how timestamps are rendered. Defaults to
 	// time.RFC3339Nano but can be changed with WithCustomTimeFormat.
 	timeFormat string
@@ -47,12 +44,13 @@ func NewJSONLogger() *JSONLogger {
 		output:     os.Stdout,
 		baseFields: make(map[string]any),
 		level:      InfoLevel,
+		writer:     NewJSONLogWriter(),
 		timeFormat: time.RFC3339Nano,
 		bufferPool: sync.Pool{
-			New: func() any { return &bytes.Buffer{} },
-		},
-		mapPool: sync.Pool{
-			New: func() any { return make(map[string]any, 8) },
+			New: func() any {
+				// Pre-allocate with reasonable capacity to reduce allocations
+				return bytes.NewBuffer(make([]byte, 0, 256))
+			},
 		},
 	}
 }
@@ -108,87 +106,51 @@ func WithCustomTimeFormat(format string) Option {
 	}
 }
 
+// WithLogWriter sets a custom LogWriter implementation for the logger.
+// This allows you to customize the output format (e.g., pretty JSON, compact JSON).
+func WithLogWriter(writer LogWriter) Option {
+	return func(jl *JSONLogger) {
+		if writer != nil {
+			jl.writer = writer
+		}
+	}
+}
+
+// WithPrettyJSON configures the logger to use pretty-formatted JSON output.
+func WithPrettyJSON(indent string) Option {
+	return func(jl *JSONLogger) {
+		jl.writer = NewPrettyJSONLogWriter(indent)
+	}
+}
+
+// WithCompactJSON configures the logger to use compact JSON output.
+func WithCompactJSON() Option {
+	return func(jl *JSONLogger) {
+		jl.writer = NewCompactJSONLogWriter()
+	}
+}
+
 // log builds a JSON object from baseFields + message fields and writes it.
 func (jl *JSONLogger) log(lv Level, levelStr, msg string, keyValuePairs ...map[string]any) {
 	if lv < jl.level {
 		return
 	}
 
-	// try to reuse a temporary map from the pool to avoid allocating a new
-	// map for each log invocation. Clear it before use and put it back when
-	// finished.
-	m := jl.mapPool.Get().(map[string]any)
-	// clear any previous contents
-	for k := range m {
-		delete(m, k)
-	}
-	// pre-size isn't required because pooled maps will retain capacity.
-	for k, v := range jl.baseFields {
-		m[k] = v
-	}
+	buf := jl.bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
 
-	// use configured time format
+	// Use configured time format
 	tf := jl.timeFormat
 	if tf == "" {
 		tf = time.RFC3339Nano
 	}
 
-	m["timestamp"] = time.Now().UTC().Format(tf)
+	// Use the LogWriter to write the log entry
+	jl.writer.WriteLogEntry(buf, time.Now(), tf, levelStr, msg, jl.baseFields, keyValuePairs...)
 
-	// Keep only a machine-friendly plain `level` field.
-	m["level"] = levelStr
-	m["message"] = msg
-
-	// merge provided maps into the output map
-	if len(keyValuePairs) > 0 {
-		mergeMaps(m, keyValuePairs...)
-	}
-
-	buf := jl.bufferPool.Get().(*bytes.Buffer)
-	buf.Reset()
-
-	// Try fast encoder first; if it cannot handle some type, fall back to
-	// encoding/json which handles all cases.
-	if FastEncode(buf, m) {
-		// ensure newline suffix like json.Encoder.Encode does
-		if buf.Len() == 0 || buf.Bytes()[buf.Len()-1] != '\n' {
-			buf.WriteByte('\n')
-		}
-	} else {
-		if err := MarshalToBuffer(buf, m); err != nil {
-			// if marshal fails (unsupported type), write a minimal JSON error
-			jl.mutex.Lock()
-			tf := jl.timeFormat
-			if tf == "" {
-				tf = time.RFC3339Nano
-			}
-
-			if _, writeErr := fmt.Fprintf(jl.output,
-				"{\"timestamp\":\"%s\",\"level\":\"%s\",\"message\":\"%s\",\"error\":\"%s\"}\n",
-				time.Now().UTC().Format(tf), levelStr, msg, err.Error()); writeErr != nil {
-				// best-effort fallback: write write-errors to stderr
-				fmt.Fprintln(os.Stderr, "json logger write error:", writeErr)
-			}
-
-			jl.mutex.Unlock()
-			jl.bufferPool.Put(buf)
-			return
-		}
-
-		// ensure newline suffix
-		if buf.Len() == 0 || buf.Bytes()[buf.Len()-1] != '\n' {
-			buf.WriteByte('\n')
-		}
-	}
-
+	// Write to output with minimal locking
 	jl.mutex.Lock()
 	_, _ = jl.output.Write(buf.Bytes())
 	jl.mutex.Unlock()
 	jl.bufferPool.Put(buf)
-
-	// clear and return the temporary map to the pool
-	for k := range m {
-		delete(m, k)
-	}
-	jl.mapPool.Put(m)
 }
