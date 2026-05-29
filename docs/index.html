@@ -1,47 +1,30 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>Logger Benchmark Visualization</title>
-    <script src="https://go-echarts.github.io/go-echarts-assets/assets/echarts.min.js"></script>
-    <script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/westeros.js"></script>
+  <meta charset="utf-8">
+  <title>Logger Benchmark Visualization</title>
+  <script src="https://go-echarts.github.io/go-echarts-assets/assets/echarts.min.js"></script>
+  <script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/westeros.js"></script>
 </head>
-
 <body>
+  <style>
+    .container { display: flex; justify-content: center; align-items: center; }
+    .item { margin: auto; }
+  </style>
 
+  <div class="container"><div class="item" id="cpu" style="width:1200px;height:700px;"></div></div>
+  <div class="container"><div class="item" id="mem" style="width:1200px;height:700px;"></div></div>
+  <div class="container"><div class="item" id="alloc" style="width:1200px;height:700px;"></div></div>
 
-
-    <style> .container {display: flex;justify-content: center;align-items: center;} .item {margin: auto;} </style> <div class="container">
-    <div class="item" id="CjGxBABCBelU" style="width:1200px;height:700px;"></div>
-</div><script type="text/javascript">
+  <script>
     "use strict";
-    let goecharts_CjGxBABCBelU = echarts.init(document.getElementById('CjGxBABCBelU'), "westeros", { renderer: "canvas" });
-    let option_CjGxBABCBelU = {"grid":[{"left":"80px","top":"120px","right":"80px","bottom":"80px"}],"legend":{"show":true,"top":"80px"},"series":[{"name":"Info","type":"bar","data":[{"value":137.6},{"value":231.8},{"value":27.15},{"value":58.07},{"value":776.5},{"value":1411}]},{"name":"With Fields","type":"bar","data":[{"value":186.1},{"value":267.6},{"value":30.3},{"value":137.4},{"value":1582},{"value":2500}]}],"title":{"text":"Logger Performance - Execution Time","subtext":"Lower is better (nanoseconds per operation)","top":"20px"},"toolbox":{},"tooltip":{"show":true},"xAxis":[{"name":"Loggers","data":["Golog","Slog","Zerolog","Zap","Apex","Logrus"]}],"yAxis":[{"name":"Time (ns/op)"}]}
+    const cpu = echarts.init(document.getElementById("cpu"), "westeros", {renderer: "canvas"});
+    const mem = echarts.init(document.getElementById("mem"), "westeros", {renderer: "canvas"});
+    const alloc = echarts.init(document.getElementById("alloc"), "westeros", {renderer: "canvas"});
 
-    goecharts_CjGxBABCBelU.setOption(option_CjGxBABCBelU);
-</script> <div class="container">
-    <div class="item" id="OujpfSyKUSDG" style="width:1200px;height:700px;"></div>
-</div><script type="text/javascript">
-    "use strict";
-    let goecharts_OujpfSyKUSDG = echarts.init(document.getElementById('OujpfSyKUSDG'), "westeros", { renderer: "canvas" });
-    let option_OujpfSyKUSDG = {"grid":[{"left":"80px","top":"120px","right":"80px","bottom":"80px"}],"legend":{"show":true,"top":"80px"},"series":[{"name":"Info","type":"bar","data":[{"value":32},{"value":48},{"value":0},{"value":32},{"value":216},{"value":871}]},{"name":"With Fields","type":"bar","data":[{"value":32},{"value":48},{"value":0},{"value":225},{"value":1185},{"value":1818}]}],"title":{"text":"Logger Performance - Memory Usage","subtext":"Lower is better (bytes per operation)","top":"20px"},"toolbox":{},"tooltip":{"show":true},"xAxis":[{"name":"Loggers","data":["Golog","Slog","Zerolog","Zap","Apex","Logrus"]}],"yAxis":[{"name":"Memory (B/op)"}]}
-
-    goecharts_OujpfSyKUSDG.setOption(option_OujpfSyKUSDG);
-</script> <div class="container">
-    <div class="item" id="BKfTRSUDnZbF" style="width:1200px;height:700px;"></div>
-</div><script type="text/javascript">
-    "use strict";
-    let goecharts_BKfTRSUDnZbF = echarts.init(document.getElementById('BKfTRSUDnZbF'), "westeros", { renderer: "canvas" });
-    let option_BKfTRSUDnZbF = {"grid":[{"left":"80px","top":"120px","right":"80px","bottom":"80px"}],"legend":{"show":true,"top":"80px"},"series":[{"name":"Info","type":"bar","data":[{"value":1},{"value":3},{"value":0},{"value":1},{"value":4},{"value":19}]},{"name":"With Fields","type":"bar","data":[{"value":1},{"value":3},{"value":0},{"value":2},{"value":16},{"value":29}]}],"title":{"text":"Logger Performance - Allocations","subtext":"Lower is better (allocations per operation)","top":"20px"},"toolbox":{},"tooltip":{"show":true},"xAxis":[{"name":"Loggers","data":["Golog","Slog","Zerolog","Zap","Apex","Logrus"]}],"yAxis":[{"name":"Allocations (allocs/op)"}]}
-
-    goecharts_BKfTRSUDnZbF.setOption(option_BKfTRSUDnZbF);
-</script>
-
-
-
-
-
-
+    cpu.setOption({"grid":[{"bottom":"80px","left":"80px","right":"80px","top":"120px"}],"legend":{"show":true,"top":"80px"},"series":[{"name":"Simple","type":"bar","data":[{"value":104.5},{"value":176.9},{"value":25.98},{"value":43.58},{"value":646.6},{"value":1161}]},{"name":"WithFields","type":"bar","data":[{"value":39.16},{"value":215.7},{"value":34.43},{"value":63.59},{"value":1481},{"value":2532}]},{"name":"WithLargeFields","type":"bar","data":[{"value":38.28},{"value":361.9},{"value":33.93},{"value":109.4},{"value":3217},{"value":4825}]},{"name":"WithExtraLargeFields","type":"bar","data":[{"value":55.53},{"value":535.5},{"value":47.06},{"value":114.2},{"value":5306},{"value":6829}]}],"title":{"subtext":"Lower is better (nanoseconds per operation)","text":"Logger Performance - Execution Time","top":"20px"},"toolbox":{},"tooltip":{"show":true},"xAxis":[{"data":["Golog","Slog","Zerolog","Zap","Apex","Logrus"],"name":"Loggers"}],"yAxis":[{"name":"Time (ns/op)"}]});
+    mem.setOption({"grid":[{"bottom":"80px","left":"80px","right":"80px","top":"120px"}],"legend":{"show":true,"top":"80px"},"series":[{"name":"Simple","type":"bar","data":[{"value":0},{"value":48},{"value":0},{"value":32},{"value":216},{"value":872}]},{"name":"WithFields","type":"bar","data":[{"value":0},{"value":48},{"value":0},{"value":32},{"value":993},{"value":2294}]},{"name":"WithLargeFields","type":"bar","data":[{"value":0},{"value":369},{"value":0},{"value":32},{"value":2236},{"value":4175}]},{"name":"WithExtraLargeFields","type":"bar","data":[{"value":0},{"value":701},{"value":0},{"value":32},{"value":3968},{"value":5878}]}],"title":{"subtext":"Lower is better (bytes per operation)","text":"Logger Performance - Memory Usage","top":"20px"},"toolbox":{},"tooltip":{"show":true},"xAxis":[{"data":["Golog","Slog","Zerolog","Zap","Apex","Logrus"],"name":"Loggers"}],"yAxis":[{"name":"Memory (B/op)"}]});
+    alloc.setOption({"grid":[{"bottom":"80px","left":"80px","right":"80px","top":"120px"}],"legend":{"show":true,"top":"80px"},"series":[{"name":"Simple","type":"bar","data":[{"value":0},{"value":3},{"value":0},{"value":1},{"value":4},{"value":19}]},{"name":"WithFields","type":"bar","data":[{"value":0},{"value":3},{"value":0},{"value":1},{"value":18},{"value":35}]},{"name":"WithLargeFields","type":"bar","data":[{"value":0},{"value":4},{"value":0},{"value":1},{"value":37},{"value":55}]},{"name":"WithExtraLargeFields","type":"bar","data":[{"value":0},{"value":5},{"value":0},{"value":1},{"value":53},{"value":69}]}],"title":{"subtext":"Lower is better (allocations per operation)","text":"Logger Performance - Allocations","top":"20px"},"toolbox":{},"tooltip":{"show":true},"xAxis":[{"data":["Golog","Slog","Zerolog","Zap","Apex","Logrus"],"name":"Loggers"}],"yAxis":[{"name":"Allocations (allocs/op)"}]});
+  </script>
 </body>
 </html>
