@@ -226,24 +226,24 @@ func appendRFC3339NanoUTC(dst []byte, t time.Time) []byte {
 	hour, minute, sec := t.Clock()
 	nsec := t.Nanosecond()
 
-	dst = append4(dst, year)
+	dst = appendFourDigitNumber(dst, year)
 	dst = append(dst, '-')
-	dst = append2(dst, int(month))
+	dst = appendTwoDigitNumber(dst, int(month))
 	dst = append(dst, '-')
-	dst = append2(dst, day)
+	dst = appendTwoDigitNumber(dst, day)
 	dst = append(dst, 'T')
-	dst = append2(dst, hour)
+	dst = appendTwoDigitNumber(dst, hour)
 	dst = append(dst, ':')
-	dst = append2(dst, minute)
+	dst = appendTwoDigitNumber(dst, minute)
 	dst = append(dst, ':')
-	dst = append2(dst, sec)
+	dst = appendTwoDigitNumber(dst, sec)
 
 	if nsec != 0 {
 		dst = append(dst, '.')
 		start := len(dst)
 		var frac [9]byte
 		for i := 8; i >= 0; i-- {
-			frac[i] = byte('0' + (nsec % 10))
+			frac[i] = decimalDigits[nsec%10]
 			nsec /= 10
 		}
 		dst = append(dst, frac[:]...)
@@ -255,16 +255,18 @@ func appendRFC3339NanoUTC(dst []byte, t time.Time) []byte {
 	return append(dst, 'Z')
 }
 
-func append2(dst []byte, value int) []byte {
-	return append(dst, byte('0'+value/10), byte('0'+value%10))
+const decimalDigits = "0123456789"
+
+func appendTwoDigitNumber(dst []byte, value int) []byte {
+	return append(dst, decimalDigits[value/10], decimalDigits[value%10])
 }
 
-func append4(dst []byte, value int) []byte {
+func appendFourDigitNumber(dst []byte, value int) []byte {
 	return append(
 		dst,
-		byte('0'+(value/1000)%10),
-		byte('0'+(value/100)%10),
-		byte('0'+(value/10)%10),
-		byte('0'+value%10),
+		decimalDigits[(value/1000)%10],
+		decimalDigits[(value/100)%10],
+		decimalDigits[(value/10)%10],
+		decimalDigits[value%10],
 	)
 }
