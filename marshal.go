@@ -20,7 +20,7 @@ func marshalValue(buf *bytes.Buffer, reflectValue reflect.Value) error {
 		return nil
 	}
 
-	for reflectValue.Kind() == reflect.Interface || reflectValue.Kind() == reflect.Ptr {
+	for reflectValue.Kind() == reflect.Interface || reflectValue.Kind() == reflect.Pointer {
 		if reflectValue.IsNil() {
 			buf.WriteString("null")
 			return nil
