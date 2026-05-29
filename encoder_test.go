@@ -109,10 +109,13 @@ func TestFastQuoteControlCharsAndNumericEdgecases(t *testing.T) {
 		t.Fatalf("int32 encoded mismatch: got %s", buf2.String())
 	}
 
-	// but map[string]any with a uint value is not supported by inline switch and should fail
+	// map[string]any with a uint value — now fully supported by the inline switch
 	m := map[string]any{"u": uint(7)}
 	var buf3 bytes.Buffer
-	if FastEncode(&buf3, m) {
-		t.Fatalf("expected FastEncode(map[string]any with uint) to return false")
+	if !FastEncode(&buf3, m) {
+		t.Fatalf("expected FastEncode(map[string]any with uint) to return true")
+	}
+	if buf3.String() != `{"u":7}` {
+		t.Fatalf("uint in map encoded mismatch: got %s", buf3.String())
 	}
 }

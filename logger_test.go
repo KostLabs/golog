@@ -7,26 +7,25 @@ import (
 	"testing"
 )
 
-// BLogger is a simple implementation of Logger used by tests to verify
-// SetLogger forwards package-level helper calls.
+// BLogger is a small test logger used to verify package-level forwarding.
 type BLogger struct{ b *bytes.Buffer }
 
-func (b *BLogger) Info(msg string, additionalFields ...map[string]any) {
+func (b *BLogger) Info(msg string, _ ...Field) {
 	b.b.WriteString("I:" + msg + "\n")
 }
-func (b *BLogger) Warn(msg string, additionalFields ...map[string]any) {
+func (b *BLogger) Warn(msg string, _ ...Field) {
 	b.b.WriteString("W:" + msg + "\n")
 }
-func (b *BLogger) Error(msg string, additionalFields ...map[string]any) {
+func (b *BLogger) Error(msg string, _ ...Field) {
 	b.b.WriteString("E:" + msg + "\n")
 }
-func (b *BLogger) Debug(msg string, additionalFields ...map[string]any) {
+func (b *BLogger) Debug(msg string, _ ...Field) {
 	b.b.WriteString("D:" + msg + "\n")
 }
 
 func TestLoggerWithInfo(t *testing.T) {
 	// Given
-	type details map[string]any
+	// typed details
 	buf := &bytes.Buffer{}
 	jl := NewJSONLoggerWithOptions(
 		WithLevel(InfoLevel),
@@ -39,10 +38,10 @@ func TestLoggerWithInfo(t *testing.T) {
 	)
 
 	// When
-	jl.Info("info message", details{"orderID": "1001"})
-	jl.Warn("warn message", details{"diskSpace": "low"})
-	jl.Error("error message", details{"errorCode": 500})
-	jl.Debug("debug message", details{"debugInfo": "details"})
+	jl.Info("info message", Str("orderID", "1001"))
+	jl.Warn("warn message", Str("diskSpace", "low"))
+	jl.Error("error message", Int("errorCode", 500))
+	jl.Debug("debug message", Str("debugInfo", "details"))
 
 	// Then
 	levels := collectLevelsFromBuffer(buf)
@@ -63,7 +62,7 @@ func TestLoggerWithInfo(t *testing.T) {
 
 func TestLoggerWithWarn(t *testing.T) {
 	// Given
-	type details map[string]any
+	// typed details
 	buf := &bytes.Buffer{}
 	jl := NewJSONLoggerWithOptions(
 		WithLevel(WarnLevel),
@@ -75,10 +74,10 @@ func TestLoggerWithWarn(t *testing.T) {
 	)
 
 	// When
-	jl.Info("info message", details{"infoID": "1001"})
-	jl.Warn("warn message", details{"diskSpace": "low"})
-	jl.Error("error message", details{"errorCode": 500})
-	jl.Debug("debug message", details{"debugInfo": "details"})
+	jl.Info("info message", Str("infoID", "1001"))
+	jl.Warn("warn message", Str("diskSpace", "low"))
+	jl.Error("error message", Int("errorCode", 500))
+	jl.Debug("debug message", Str("debugInfo", "details"))
 
 	// Then
 	levels := collectLevelsFromBuffer(buf)
@@ -99,7 +98,7 @@ func TestLoggerWithWarn(t *testing.T) {
 
 func TestLoggerWithError(t *testing.T) {
 	// Given
-	type details map[string]any
+	// typed details
 	buf := &bytes.Buffer{}
 	jl := NewJSONLoggerWithOptions(
 		WithLevel(ErrorLevel),
@@ -111,10 +110,10 @@ func TestLoggerWithError(t *testing.T) {
 	)
 
 	// When
-	jl.Info("info message", details{"infoID": "1001"})
-	jl.Warn("warn message", details{"diskSpace": "low"})
-	jl.Error("error message", details{"errorCode": 500})
-	jl.Debug("debug message", details{"debugInfo": "details"})
+	jl.Info("info message", Str("infoID", "1001"))
+	jl.Warn("warn message", Str("diskSpace", "low"))
+	jl.Error("error message", Int("errorCode", 500))
+	jl.Debug("debug message", Str("debugInfo", "details"))
 
 	// Then
 	levels := collectLevelsFromBuffer(buf)
@@ -129,7 +128,7 @@ func TestLoggerWithError(t *testing.T) {
 
 func TestLoggerWithDebug(t *testing.T) {
 	// Given
-	type details map[string]any
+	// typed details
 	buf := &bytes.Buffer{}
 	jl := NewJSONLoggerWithOptions(
 		WithLevel(DebugLevel),
@@ -141,10 +140,10 @@ func TestLoggerWithDebug(t *testing.T) {
 	)
 
 	// When
-	jl.Info("info message", details{"infoID": "1001"})
-	jl.Warn("warn message", details{"diskSpace": "low"})
-	jl.Error("error message", details{"errorCode": 500})
-	jl.Debug("debug message", details{"debugInfo": "details"})
+	jl.Info("info message", Str("infoID", "1001"))
+	jl.Warn("warn message", Str("diskSpace", "low"))
+	jl.Error("error message", Int("errorCode", 500))
+	jl.Debug("debug message", Str("debugInfo", "details"))
 
 	// Then
 	levels := collectLevelsFromBuffer(buf)
@@ -193,7 +192,7 @@ func TestWithBaseFieldAndFieldsMerge(t *testing.T) {
 		WithBaseField("service", "svc"),
 	)
 
-	jl.Info("hi", map[string]any{"service": "override", "x": 1})
+	jl.Info("hi", Str("service", "override"), Int("x", 1))
 	var m map[string]any
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
 	if err := json.Unmarshal([]byte(lines[0]), &m); err != nil {

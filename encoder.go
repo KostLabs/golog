@@ -70,7 +70,8 @@ func encodeValue(buffer *bytes.Buffer, value any) bool {
 		return true
 	case time.Time:
 		buffer.WriteByte('"')
-		buffer.WriteString(typedValue.UTC().Format(time.RFC3339Nano))
+		var tsBuf [64]byte
+		buffer.Write(typedValue.UTC().AppendFormat(tsBuf[:0], time.RFC3339Nano))
 		buffer.WriteByte('"')
 		return true
 	case map[string]any:
@@ -110,13 +111,32 @@ func encodeMap(buffer *bytes.Buffer, mapData map[string]any) bool {
 			}
 		case int:
 			fastFormatInt(buffer, int64(typedValue))
+		case int8:
+			fastFormatInt(buffer, int64(typedValue))
+		case int16:
+			fastFormatInt(buffer, int64(typedValue))
+		case int32:
+			fastFormatInt(buffer, int64(typedValue))
 		case int64:
 			fastFormatInt(buffer, typedValue)
+		case uint:
+			fastFormatUint(buffer, uint64(typedValue))
+		case uint8:
+			fastFormatUint(buffer, uint64(typedValue))
+		case uint16:
+			fastFormatUint(buffer, uint64(typedValue))
+		case uint32:
+			fastFormatUint(buffer, uint64(typedValue))
+		case uint64:
+			fastFormatUint(buffer, typedValue)
+		case float32:
+			buffer.WriteString(strconv.FormatFloat(float64(typedValue), 'g', -1, 32))
 		case float64:
 			buffer.WriteString(strconv.FormatFloat(typedValue, 'g', -1, 64))
 		case time.Time:
 			buffer.WriteByte('"')
-			buffer.WriteString(typedValue.UTC().Format(time.RFC3339Nano))
+			var tsBuf [64]byte
+			buffer.Write(typedValue.UTC().AppendFormat(tsBuf[:0], time.RFC3339Nano))
 			buffer.WriteByte('"')
 		case map[string]any:
 			if !encodeMap(buffer, typedValue) {
@@ -154,8 +174,17 @@ func encodeSliceAny(buffer *bytes.Buffer, slice []any) bool {
 // avoid extra allocations from strconv.Quote.
 func fastQuote(buffer *bytes.Buffer, inputString string) {
 	buffer.WriteByte('"')
+	segmentStart := 0
 	for charIndex := 0; charIndex < len(inputString); charIndex++ {
 		currentChar := inputString[charIndex]
+		if currentChar >= 0x20 && currentChar != '\\' && currentChar != '"' {
+			continue
+		}
+
+		if segmentStart < charIndex {
+			buffer.WriteString(inputString[segmentStart:charIndex])
+		}
+
 		switch currentChar {
 		case '\\':
 			buffer.WriteString(`\\`)
@@ -168,16 +197,18 @@ func fastQuote(buffer *bytes.Buffer, inputString string) {
 		case '\t':
 			buffer.WriteString(`\t`)
 		default:
-			if currentChar < 0x20 {
-				// control character, write as \u00XX
-				const hexDigits = "0123456789abcdef"
-				buffer.WriteString("\\u00")
-				buffer.WriteByte(hexDigits[currentChar>>4])
-				buffer.WriteByte(hexDigits[currentChar&0xF])
-			} else {
-				buffer.WriteByte(currentChar)
-			}
+			// control character, write as \u00XX
+			const hexDigits = "0123456789abcdef"
+			buffer.WriteString("\\u00")
+			buffer.WriteByte(hexDigits[currentChar>>4])
+			buffer.WriteByte(hexDigits[currentChar&0xF])
 		}
+
+		segmentStart = charIndex + 1
+	}
+
+	if segmentStart < len(inputString) {
+		buffer.WriteString(inputString[segmentStart:])
 	}
 	buffer.WriteByte('"')
 }

@@ -30,7 +30,7 @@ func marshalValue(buf *bytes.Buffer, reflectValue reflect.Value) error {
 
 	switch reflectValue.Kind() {
 	case reflect.String:
-		buf.WriteString(strconv.Quote(reflectValue.String()))
+		fastQuote(buf, reflectValue.String())
 		return nil
 	case reflect.Bool:
 		if reflectValue.Bool() {
@@ -40,10 +40,10 @@ func marshalValue(buf *bytes.Buffer, reflectValue reflect.Value) error {
 		}
 		return nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		buf.WriteString(strconv.FormatInt(reflectValue.Int(), 10))
+		fastFormatInt(buf, reflectValue.Int())
 		return nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		buf.WriteString(strconv.FormatUint(reflectValue.Uint(), 10))
+		fastFormatUint(buf, reflectValue.Uint())
 		return nil
 	case reflect.Float32, reflect.Float64:
 		buf.WriteString(strconv.FormatFloat(reflectValue.Float(), 'g', -1, 64))
@@ -60,7 +60,7 @@ func marshalValue(buf *bytes.Buffer, reflectValue reflect.Value) error {
 			if i > 0 {
 				buf.WriteByte(',')
 			}
-			buf.WriteString(strconv.Quote(k.String()))
+			fastQuote(buf, k.String())
 			buf.WriteByte(':')
 			if err := marshalValue(buf, reflectValue.MapIndex(k)); err != nil {
 				return err
@@ -82,7 +82,11 @@ func marshalValue(buf *bytes.Buffer, reflectValue reflect.Value) error {
 		return nil
 	case reflect.Struct:
 		if reflectValue.Type() == reflect.TypeOf(time.Time{}) {
-			buf.WriteString(strconv.Quote(reflectValue.Interface().(time.Time).UTC().Format(time.RFC3339Nano)))
+			t := reflectValue.Interface().(time.Time)
+			buf.WriteByte('"')
+			var tsBuf [64]byte
+			buf.Write(t.UTC().AppendFormat(tsBuf[:0], time.RFC3339Nano))
+			buf.WriteByte('"')
 			return nil
 		}
 		buf.WriteByte('{')
@@ -96,7 +100,7 @@ func marshalValue(buf *bytes.Buffer, reflectValue reflect.Value) error {
 			if !firstElement {
 				buf.WriteByte(',')
 			}
-			buf.WriteString(strconv.Quote(field.Name))
+			fastQuote(buf, field.Name)
 			buf.WriteByte(':')
 			if err := marshalValue(buf, reflectValue.Field(i)); err != nil {
 				return err

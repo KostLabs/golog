@@ -14,15 +14,17 @@
 //   - JSONLogger: a ready-to-use implementation that writes newline-delimited
 //     JSON objects. Create it with sensible defaults using NewJSONLogger or
 //     customize via NewJSONLoggerWithOptions and Option helpers.
+//   - Field API: typed fields (Str/Int/Bool/...) for higher-throughput
+//     logging via Info/Warn/Error/Debug.
 //
 // Logger interface
 // The package exposes a minimal Logger interface defined in `logger.go`:
 //
 //	type Logger interface {
-//	    Info(msg string, additionalFields ...map[string]any)
-//	    Warn(msg string, additionalFields ...map[string]any)
-//	    Error(msg string, additionalFields ...map[string]any)
-//	    Debug(msg string, additionalFields ...map[string]any)
+//	    Info(message string, fields ...Field)
+//	    Warn(message string, fields ...Field)
+//	    Error(message string, fields ...Field)
+//	    Debug(message string, fields ...Field)
 //	}
 //
 // Use `SetLogger(l Logger)` to install a logger globally that adapter code can
@@ -38,9 +40,9 @@
 // In addition it merges:
 //   - base fields: a map of fields attached to the logger at construction time
 //     (for example, application name, environment, service id)
-//   - per-call additional maps: zero or more `map[string]any` passed as the
-//     final variadic parameter to Info/Warn/Error/Debug; later maps override
-//     earlier values.
+//   - per-call typed fields: zero or more Field values passed to
+//     Info/Warn/Error/Debug; later fields with the same key override earlier
+//     ones.
 //
 // Creating a logger
 //
@@ -58,40 +60,36 @@
 // Convenience option helpers
 //   - WithLevel(Level)           : set minimum log level (Debug/Info/Warn/Error)
 //   - WithOutput(io.Writer)      : set writer (stdout, file, buffer)
+//   - WithWriteLock(bool)         : enable/disable output write lock
 //   - WithBaseFields(map[string]any) : add a set of base fields
 //   - WithBaseField(key, value)  : add a single base field
 //
 // Logging calls
-// Pass zero or more maps of additional fields. Each map is merged into the
-// top-level JSON object (keys are normalized by trimming spaces, removing a
-// trailing ':' and stripping surrounding quotes). Example:
+// Pass zero or more typed fields. Each field is merged into the top-level JSON
+// object. Example:
 //
-//	jl.Info("user created", map[string]any{"userID": "1234"})
+//	jl.Info("user created", Str("userID", "1234"), Str("role", "admin"))
 //
-// Or pass multiple maps (later maps override earlier ones):
+// For performance-sensitive code paths use typed fields:
 //
-//	jl.Warn("disk low",
-//	    map[string]any{"disk": "/dev/sda1"},
-//	    map[string]any{"disk": "/dev/sda1", "free": 1024},
-//	)
+//	jl.Info("user login", Int("user_id", 42), Str("ip", "127.0.0.1"), Bool("success", true))
 //
 // Concurrency and performance notes
 //   - Writes are protected by an internal mutex so each encoded JSON line is
 //     written atomically. This prevents interleaving when multiple goroutines
 //     call log methods concurrently.
-//   - A sync.Pool of *bytes.Buffer is used to avoid allocating a fresh buffer
-//     on every log call which reduces GC pressure in hot paths.
-//   - Level filtering is a fast integer compare (if lv < jl.level { return }),
-//     so suppressed log calls are cheap.
-//   - If you need to change log level at runtime without races, consider
-//     using an atomic-based helper (not provided by default) or ensure callers
-//     set the level before concurrent usage.
+//   - A sync.Pool of reusable []byte buffers is used to avoid fresh allocations
+//     on every log call.
+//   - Level filtering uses atomic reads/writes, so suppressed log calls are
+//     cheap and runtime level changes are race-safe.
+//   - Output writes are lock-protected by default for safe serialized writes.
+//     You can disable locking with WithWriteLock(false) when writing to a
+//     thread-safe sink and optimizing for throughput.
 //
-// JSON encoding fallback
-// If a value in the merged map can't be marshaled by encoding/json (for
-// example a channel), the logger performs a best-effort fallback and writes a
-// minimal JSON object containing the timestamp, level, message and an
-// `error` field describing the marshal problem.
+// Unsupported values
+// If a field value can't be encoded by the fast encoder (for example a channel),
+// golog writes "<unsupported>" for that field value and continues encoding the
+// rest of the log entry.
 //
 // Testing
 // The package includes small tests that demonstrate expected behaviour
@@ -112,7 +110,7 @@
 //	SetLogger(jl)
 //
 //	// elsewhere in code
-//	Info("started", map[string]any{"pid": os.Getpid()})
+//	Info("started", Int("pid", os.Getpid()))
 //
 // The package-level `Info`, `Warn`, `Error`, `Debug` functions call the
 // installed global logger if one is set; otherwise they are no-ops. This makes
