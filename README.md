@@ -24,36 +24,36 @@ Main benefits in front of most popular loggers like Zap, Zerolog, Slog, Logrus a
 The main goal of `golog` is to provide high-performance logging framework, while the API remains simple and developer-friendly. Below are the benchmarks comparing `golog` with other popular loggers.
 
 ```
-go test -bench . -benchmem -run='^$'
 goos: darwin
 goarch: arm64
 pkg: benchmarks
 cpu: Apple M3 Pro
-BenchmarkGologInfo-11                   10787295                98.81 ns/op           32 B/op          1 allocs/op
-BenchmarkSlogInfo-11                     6639040               177.9 ns/op            48 B/op          3 allocs/op
-BenchmarkZerologInfo-11                 55121190                22.05 ns/op            0 B/op          0 allocs/op
-BenchmarkZapInfo-11                     25555386                50.07 ns/op           32 B/op          1 allocs/op
-BenchmarkApexInfo-11                     1887244               635.8 ns/op           216 B/op          4 allocs/op
-BenchmarkLogrusInfo-11                   1000000              1153 ns/op             871 B/op         19 allocs/op
-BenchmarkGologInfoWithFields-11          8724242               138.8 ns/op            32 B/op          1 allocs/op
-BenchmarkSlogInfoWithFields-11           5579796               211.8 ns/op            48 B/op          3 allocs/op
-BenchmarkZerologInfoWithFields-11       45540942                27.98 ns/op            0 B/op          0 allocs/op
-BenchmarkZapInfoWithFields-11           10817554               112.5 ns/op           225 B/op          2 allocs/op
-BenchmarkApexInfoWithFields-11            911013              1305 ns/op            1185 B/op         16 allocs/op
-BenchmarkLogrusInfoWithFields-11          587426              2052 ns/op            1818 B/op         29 allocs/op
-BenchmarkAllLoggersSimple/Golog-11      12999956                95.38 ns/op           32 B/op          1 allocs/op
-BenchmarkAllLoggersSimple/Slog-11        6552628               179.9 ns/op            48 B/op          3 allocs/op
-BenchmarkAllLoggersSimple/Zerolog-11    47501157                24.50 ns/op            0 B/op          0 allocs/op
-BenchmarkAllLoggersSimple/Zap-11        24266036                49.28 ns/op           32 B/op          1 allocs/op
-BenchmarkAllLoggersSimple/Apex-11        1887097               634.9 ns/op           216 B/op          4 allocs/op
-BenchmarkAllLoggersSimple/Logrus-11      1000000              1145 ns/op             871 B/op         19 allocs/op
-BenchmarkAllLoggersWithFields/Golog-11           8321142               143.3 ns/op            32 B/op          1 allocs/op
-BenchmarkAllLoggersWithFields/Slog-11            5540938               213.9 ns/op            48 B/op          3 allocs/op
-BenchmarkAllLoggersWithFields/Zerolog-11        42203119                27.83 ns/op            0 B/op          0 allocs/op
-BenchmarkAllLoggersWithFields/Zap-11            10580373               115.0 ns/op           225 B/op          2 allocs/op
-BenchmarkAllLoggersWithFields/Apex-11             898755              1322 ns/op            1185 B/op         16 allocs/op
-BenchmarkAllLoggersWithFields/Logrus-11           585775              2068 ns/op            1819 B/op         29 allocs/op
+BenchmarkAllLoggersSimple/Golog-12              23851167                49.71 ns/op            0 B/op          0 allocs/op
+BenchmarkAllLoggersSimple/Slog-12                6871609               175.9 ns/op            48 B/op          3 allocs/op
+BenchmarkAllLoggersSimple/Zerolog-12            79315244                23.59 ns/op            0 B/op          0 allocs/op
+BenchmarkAllLoggersSimple/Zap-12                27729715                43.80 ns/op           32 B/op          1 allocs/op
+BenchmarkAllLoggersSimple/Apex-12                1851841               646.4 ns/op           216 B/op          4 allocs/op
+BenchmarkAllLoggersSimple/Logrus-12              1000000              1163 ns/op             872 B/op         19 allocs/op
+BenchmarkAllLoggersWithFields/Golog-12          47756599                29.59 ns/op            0 B/op          0 allocs/op
+BenchmarkAllLoggersWithFields/Slog-12            5805918               210.5 ns/op            48 B/op          3 allocs/op
+BenchmarkAllLoggersWithFields/Zerolog-12        40578582                44.23 ns/op            0 B/op          0 allocs/op
+BenchmarkAllLoggersWithFields/Zap-12            19405268                63.27 ns/op           32 B/op          1 allocs/op
+BenchmarkAllLoggersWithFields/Apex-12             781440              1479 ns/op             993 B/op         18 allocs/op
+BenchmarkAllLoggersWithFields/Logrus-12           474498              2461 ns/op            2293 B/op         35 allocs/op
+BenchmarkAllLoggersWithLargeFields/Golog-12     31537002                37.50 ns/op            0 B/op          0 allocs/op
+BenchmarkAllLoggersWithLargeFields/Slog-12       3384866               356.7 ns/op           369 B/op          4 allocs/op
+BenchmarkAllLoggersWithLargeFields/Zerolog-12   35600738                33.32 ns/op            0 B/op          0 allocs/op
+BenchmarkAllLoggersWithLargeFields/Zap-12       13241354                93.57 ns/op           32 B/op          1 allocs/op
+BenchmarkAllLoggersWithLargeFields/Apex-12        379323              3256 ns/op            2236 B/op         37 allocs/op
+BenchmarkAllLoggersWithLargeFields/Logrus-12      248450              4815 ns/op            4175 B/op         55 allocs/op
+BenchmarkAllLoggersWithExtraLargeFields/Golog-12                21859084                56.06 ns/op            0 B/op          0 allocs/op
+BenchmarkAllLoggersWithExtraLargeFields/Slog-12                  2231878               532.8 ns/op           701 B/op          5 allocs/op
+BenchmarkAllLoggersWithExtraLargeFields/Zerolog-12              26186888                45.58 ns/op            0 B/op          0 allocs/op
+BenchmarkAllLoggersWithExtraLargeFields/Zap-12                  11174211               109.0 ns/op            32 B/op          1 allocs/op
+BenchmarkAllLoggersWithExtraLargeFields/Apex-12                   222519              5367 ns/op            3968 B/op         53 allocs/op
+BenchmarkAllLoggersWithExtraLargeFields/Logrus-12                 175506              6877 ns/op            5878 B/op         69 allocs/op
 PASS
+ok      benchmarks      33.504s
 ```
 
 Run the following commands to see the benchmarks:
@@ -63,8 +63,14 @@ Run the following commands to see the benchmarks:
 git clone https://github.com/KostLabs/golog
 cd golog/benchmarks
 
-# Run comparative benchmarks
-go test -bench . -benchmem -run='^$'
+# CPU benchmarks
+go test -bench '^BenchmarkCPU' -run='^$'
+
+# Memory benchmarks
+go test -bench '^BenchmarkMemory' -benchmem -run='^$'
+
+# Full suite (CPU + memory)
+go test -bench . -run='^$'
 ```
 
 The visualized results can be visible on [GitHub Pages](https://kostlabs.github.io/golog/).

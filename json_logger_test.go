@@ -161,7 +161,7 @@ func TestJSONLoggerIntegration(t *testing.T) {
 	)
 
 	// When
-	jl.Info("test message", map[string]any{"key": "value"})
+	jl.Info("test message", Str("key", "value"))
 
 	// Then
 	output := buf.String()

@@ -18,7 +18,7 @@ func TestLogMergesBaseAndProvidedMaps(t *testing.T) {
 	)
 
 	// When
-	jl.Info("user created", map[string]any{"userID": "u123", "app": "override"})
+	jl.Info("user created", Str("userID", "u123"), Str("app", "override"))
 
 	// Then
 	s := strings.TrimSpace(buf.String())
@@ -59,8 +59,8 @@ func TestLogLevelFilteringSanity(t *testing.T) {
 	)
 
 	// When
-	jl.Info("info should be suppressed", map[string]any{"k": "v"})
-	jl.Error("error should show", map[string]any{"err": "boom"})
+	jl.Info("info should be suppressed", Str("k", "v"))
+	jl.Error("error should show", Str("err", "boom"))
 
 	// Then
 	levels := collectLevelsFromBuffer(buf)
@@ -78,10 +78,11 @@ func TestLogEncodeFallbackWritesMinimalJSON(t *testing.T) {
 	jl := NewJSONLoggerWithOptions(
 		WithLevel(DebugLevel),
 		WithOutput(buf),
+		WithBaseField("bad", make(chan int)),
 	)
 
 	// When
-	jl.Info("bad payload", map[string]any{"bad": make(chan int)})
+	jl.Info("bad payload")
 
 	// Then
 	s := strings.TrimSpace(buf.String())
@@ -98,5 +99,8 @@ func TestLogEncodeFallbackWritesMinimalJSON(t *testing.T) {
 
 	if got["message"] != "bad payload" {
 		t.Fatalf("expected message=bad payload, got %v", got["message"])
+	}
+	if got["bad"] != "<unsupported>" {
+		t.Fatalf("expected bad=<unsupported>, got %v", got["bad"])
 	}
 }

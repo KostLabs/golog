@@ -1,140 +1,77 @@
 package golog
 
-// Logger is the minimal logging interface used by this package. It mirrors the
-// common leveled logging methods and accepts zero or more maps of additional
-// fields which are merged into the emitted structured log entry.
+// Logger is the minimal typed logging interface used by this package.
 //
-// Example (implementing and installing a simple adapter in your service):
-//
-//	// package main
-//	//
-//	// import (
-//	//     "fmt"
-//	//     "github.com/KostLabs/golog"
-//	// )
-//	//
-//	// // MyAdapter adapts application logging to the golog.Logger interface.
-//	// type MyAdapter struct{}
-//	//
-//	// func (m *MyAdapter) Info(msg string, fields ...map[string]any) {
-//	//     fmt.Println("INFO:", msg, fields)
-//	// }
-//	// func (m *MyAdapter) Warn(msg string, fields ...map[string]any) {
-//	//     fmt.Println("WARN:", msg, fields)
-//	// }
-//	// func (m *MyAdapter) Error(msg string, fields ...map[string]any) {
-//	//     fmt.Println("ERROR:", msg, fields)
-//	// }
-//	// func (m *MyAdapter) Debug(msg string, fields ...map[string]any) {
-//	//     fmt.Println("DEBUG:", msg, fields)
-//	// }
-//	//
-//	// func main() {
-//	//     adapter := &MyAdapter{}
-//	//     golog.SetLogger(adapter)
-//	//     golog.Info("service started", map[string]any{"port": 8080})
-//	// }
-//
-// The above shows a minimal adapter you can use when you want to route
-// package-level logging to your application's logger implementation.
+// It mirrors common leveled methods and accepts zero or more typed Field
+// values. Using Field avoids map allocations in hot paths.
 type Logger interface {
-	Info(msg string, additionalFields ...map[string]any)
-	Warn(msg string, additionalFields ...map[string]any)
-	Error(msg string, additionalFields ...map[string]any)
-	Debug(msg string, additionalFields ...map[string]any)
+	Info(message string, fields ...Field)
+	Warn(message string, fields ...Field)
+	Error(message string, fields ...Field)
+	Debug(message string, fields ...Field)
 }
 
-// logger is the package-level logger used by the helper functions. Install a
-// custom logger with SetLogger. By default we initialize a sensible
-// JSON logger so package helpers (Info/Warn/Error/Debug) are usable without
-// explicit installation.
+// logger is the package-level logger used by helper functions.
+// Install a custom logger with SetLogger.
 var logger Logger = NewJSONLogger()
 
-// SetLogger installs a global Logger used by the package-level helpers. Call
-// this from your application's bootstrap to route package-level logging calls
-// to your logger implementation.
-//
-// Example (installing the provided JSON logger for package-level logging):
-//
-//	// jl := golog.NewJSONLogger()
-//	// golog.SetLogger(jl)
-//	// golog.Info("started", map[string]any{"env": "prod"})
-//
-// Use `SetLogger` during application initialization so other packages can
-// call the package-level helpers without knowing the concrete logger.
+// SetLogger installs a global Logger used by package-level helpers.
 func SetLogger(l Logger) {
 	logger = l
 }
 
-// Package-level helper functions that forward to the installed logger.
-// These allow consumers to call golog.Info(...), etc., without holding
-// an explicit logger reference.
-func Info(message string, additionalFields ...map[string]any) {
+// Info logs a message at info level via the installed package-level logger.
+// If no logger is installed, the call is a no-op.
+func Info(message string, fields ...Field) {
 	if logger == nil {
 		return
 	}
-	logger.Info(message, additionalFields...)
+	logger.Info(message, fields...)
 }
 
-func Warn(message string, additionalFields ...map[string]any) {
+// Warn logs a message at warn level via the installed package-level logger.
+// If no logger is installed, the call is a no-op.
+func Warn(message string, fields ...Field) {
 	if logger == nil {
 		return
 	}
-	logger.Warn(message, additionalFields...)
+	logger.Warn(message, fields...)
 }
 
-func Error(message string, additionalFields ...map[string]any) {
+// Error logs a message at error level via the installed package-level logger.
+// If no logger is installed, the call is a no-op.
+func Error(message string, fields ...Field) {
 	if logger == nil {
 		return
 	}
-	logger.Error(message, additionalFields...)
+	logger.Error(message, fields...)
 }
 
-func Debug(message string, additionalFields ...map[string]any) {
+// Debug logs a message at debug level via the installed package-level logger.
+// If no logger is installed, the call is a no-op.
+func Debug(message string, fields ...Field) {
 	if logger == nil {
 		return
 	}
-	logger.Debug(message, additionalFields...)
+	logger.Debug(message, fields...)
 }
 
-// Info logs a message at info level with optional additional fields.
-// The fields are merged into the top-level JSON object for the entry.
-//
-// Example:
-//
-//	// jsonLogger := golog.NewJSONLogger()
-//	// jsonLogger.Info("user created", map[string]any{"user_id": 123})
-func (jsonLogger *JSONLogger) Info(message string, additionalFields ...map[string]any) {
-	jsonLogger.log(InfoLevel, "info", message, additionalFields...)
+// Info logs a message at info level with optional typed fields.
+func (jsonLogger *JSONLogger) Info(message string, fields ...Field) {
+	jsonLogger.logFields(InfoLevel, "info", message, fields)
 }
 
-// Warn logs a message at warn level with optional additional fields.
-//
-// Example:
-//
-//	// jsonLogger := golog.NewJSONLogger()
-//	// jsonLogger.Warn("high memory usage", map[string]any{"heap_mb": 512})
-func (jsonLogger *JSONLogger) Warn(message string, additionalFields ...map[string]any) {
-	jsonLogger.log(WarnLevel, "warn", message, additionalFields...)
+// Warn logs a message at warn level with optional typed fields.
+func (jsonLogger *JSONLogger) Warn(message string, fields ...Field) {
+	jsonLogger.logFields(WarnLevel, "warn", message, fields)
 }
 
-// Error logs a message at error level with optional additional fields.
-//
-// Example:
-//
-//	// jsonLogger := golog.NewJSONLogger()
-//	// jsonLogger.Error("failed to connect to db", map[string]any{"db": "primary"})
-func (jsonLogger *JSONLogger) Error(message string, additionalFields ...map[string]any) {
-	jsonLogger.log(ErrorLevel, "error", message, additionalFields...)
+// Error logs a message at error level with optional typed fields.
+func (jsonLogger *JSONLogger) Error(message string, fields ...Field) {
+	jsonLogger.logFields(ErrorLevel, "error", message, fields)
 }
 
-// Debug logs a message at debug level with optional additional fields.
-// Debug messages are filtered out unless the logger's level is set to Debug.
-//
-// Example (enable debug by creating the logger with DebugLevel):
-//
-//	// jsonLogger := golog.NewJSONLoggerWithOptions(WithLevel(DebugLevel))
-//	// jsonLogger.Debug("cache miss", map[string]any{"key": "user:123"})
-func (jsonLogger *JSONLogger) Debug(message string, additionalFields ...map[string]any) {
-	jsonLogger.log(DebugLevel, "debug", message, additionalFields...)
+// Debug logs a message at debug level with optional typed fields.
+func (jsonLogger *JSONLogger) Debug(message string, fields ...Field) {
+	jsonLogger.logFields(DebugLevel, "debug", message, fields)
 }
