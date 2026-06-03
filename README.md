@@ -1,6 +1,6 @@
 # golog
 
-`golog` is lightweight, high-performance, **zero-dependency** Go logging framework designed for structured JSON logging for modern cloud-native systems.
+`golog` is a lightweight, high-performance, **zero-dependency** Go logging framework designed for structured JSON logging in modern cloud-native systems.
 
 ## Problem
 
@@ -12,11 +12,11 @@ The solution is `golog`. An intuitive, developer-friendly structured logger with
 
 ## Benefits
 
-Main benefits in front of most popular loggers like Zap, Zerolog, Slog, Logrus and Apex Log are:
+Main benefits compared with popular loggers like Zap, Zerolog, Slog, Logrus, and Apex Log are:
 
 - **Zero dependencies** - no external packages required
 - **Developer-Friendly API** - no need for wrappers or chaining
-- **Built-in key normalization** - handles common key formatting issues
+- **Typed Field API** - low-allocation structured fields via helpers like `Str`, `Int`, `Float64`, and `Bool`
 - **Built-in error handling** - automatic fallbacks for unsupported types
 
 ## Benchmarks
@@ -63,14 +63,12 @@ Run the following commands to see the benchmarks:
 git clone https://github.com/KostLabs/golog
 cd golog/benchmarks
 
-# CPU benchmarks
-go test -bench '^BenchmarkCPU' -run='^$'
+# Unified benchmark suite (CPU + memory)
+go test -bench '^BenchmarkAllLoggers' -benchmem -run='^$'
 
-# Memory benchmarks
-go test -bench '^BenchmarkMemory' -benchmem -run='^$'
-
-# Full suite (CPU + memory)
-go test -bench . -run='^$'
+# Re-generate benchmark charts in docs/index.html (from repo root)
+cd ..
+go run ./cmd/benchviz
 ```
 
 The visualized results can be visible on [GitHub Pages](https://kostlabs.github.io/golog/).
@@ -91,20 +89,17 @@ package main
 import "github.com/KostLabs/golog"
 
 func main() {
-	// Optional type alias for convenience
-	type fields map[string]any
-
 	golog.Info("service started")
-	golog.Error("connection failed", fields{
-		"host":       "db.example.com",
-		"retry_count": 3,
-	})
+  golog.Error("connection failed",
+    golog.Str("host", "db.example.com"),
+    golog.Int("retry_count", 3),
+  )
 }
 ```
 
 ### Advanced Configuration
 
-`golog` offers advanced configuration options with methods like `WithLevel`, `WithOutput`, `WithBaseField`, `WithBaseFields` and `WithCustomTimeFormat`. The methods can be chained for a fluent configuration experience.
+`golog` offers advanced configuration options with methods like `WithLevel`, `WithOutput`, `WithWriteLock`, `WithBaseField`, `WithBaseFields`, and `WithCustomTimeFormat`. The methods can be chained for a fluent configuration experience.
 
 #### Example - Basic Custom Logger with Debug Log Level & Custom Output
 
@@ -112,25 +107,23 @@ func main() {
 package main
 
 import (
-    "os"
-    "github.com/KostLabs/golog"
+  "os"
+
+  "github.com/KostLabs/golog"
 )
 
 func main() {
-	// Optional type alias for convenience
-	type fields map[string]any
+  logger := golog.NewJSONLoggerWithOptions(
+    golog.WithLevel(golog.DebugLevel),
+    golog.WithOutput(os.Stdout),
+  )
 
-    logger := golog.NewJSONLoggerWithOptions(
-        golog.WithLevel(golog.DebugLevel),
-        golog.WithOutput(os.Stdout),
-    )
-
-    golog.SetLogger(logger)
-    golog.Info("payment processed", fields{
-        "user_id": 12345,
-        "amount": 99.99,
-        "currency": "USD",
-    })
+  golog.SetLogger(logger)
+  golog.Info("payment processed",
+    golog.Int("user_id", 12345),
+    golog.Float64("amount", 99.99),
+    golog.Str("currency", "USD"),
+  )
 }
 ```
 
@@ -140,34 +133,29 @@ func main() {
 package main
 
 import (
-    "os"
-    "github.com/KostLabs/golog"
+  "os"
+
+  "github.com/KostLabs/golog"
 )
 
 func main() {
-	// Optional type alias for convenience
-	type fields map[string]any
-    logger := golog.NewJSONLoggerWithOptions(
-        golog.WithLevel(golog.DebugLevel),
-        golog.WithOutput(os.Stderr),
-        golog.WithBaseFields(
-			fields{
-				"service": "payment-api",
-				"version": "1.2.3",
-			},
-		),
-        golog.WithCustomTimeFormat("2006-01-02 15:04:05"),
-    )
-    
-    // Set as global logger
-    golog.SetLogger(logger)
-    
-    // Now all package-level calls use your configuration
-    golog.Info("payment processed", fields{
-        "user_id": 12345,
-        "amount": 99.99,
-        "currency": "USD",
-    })
+  logger := golog.NewJSONLoggerWithOptions(
+    golog.WithLevel(golog.DebugLevel),
+    golog.WithOutput(os.Stderr),
+    golog.WithBaseField("service", "payment-api"),
+    golog.WithBaseField("version", "1.2.3"),
+    golog.WithCustomTimeFormat("2006-01-02 15:04:05"),
+  )
+
+  // Set as global logger
+  golog.SetLogger(logger)
+
+  // Now all package-level calls use your configuration
+  golog.Info("payment processed",
+    golog.Int("user_id", 12345),
+    golog.Float64("amount", 99.99),
+    golog.Str("currency", "USD"),
+  )
 }
 ```
 
@@ -176,14 +164,14 @@ func main() {
 #### Instance-Based Logging
 ```go
 logger := golog.NewJSONLoggerWithOptions(
-    golog.WithLevel(golog.DebugLevel),
-    golog.WithBaseField("component", "auth"),
+	golog.WithLevel(golog.DebugLevel),
+	golog.WithBaseField("component", "auth"),
 )
 
-logger.Info("authentication successful", map[string]any{
-    "user_id": 12345,
-    "method": "oauth2",
-})
+logger.Info("authentication successful",
+	golog.Int("user_id", 12345),
+	golog.Str("method", "oauth2"),
+)
 ```
 
 #### Package-Level Helpers
@@ -193,8 +181,8 @@ golog.SetLogger(myCustomLogger)
 
 // Use anywhere in your application
 golog.Info("server starting")
-golog.Debug("cache hit", map[string]any{"key": "user:123"})
-golog.Error("database error", map[string]any{"error": err.Error()})
+golog.Debug("cache hit", golog.Str("key", "user:123"))
+golog.Error("database error", golog.Str("error", err.Error()))
 ```
 
 ## Migration Guide
@@ -209,7 +197,7 @@ logger.WithFields(logrus.Fields{"key": "value"}).Info("message")
 
 // After (golog)
 logger := golog.NewJSONLogger()
-logger.Info("message", map[string]any{"key": "value"})
+logger.Info("message", golog.Str("key", "value"))
 ```
 
 ### From Zap
@@ -218,7 +206,7 @@ logger.Info("message", map[string]any{"key": "value"})
 logger.Info("message", zap.String("key", "value"), zap.Int("count", 42))
 
 // After (golog)
-logger.Info("message", map[string]any{"key": "value", "count": 42})
+logger.Info("message", golog.Str("key", "value"), golog.Int("count", 42))
 ```
 
 ### From Slog
@@ -227,5 +215,5 @@ logger.Info("message", map[string]any{"key": "value", "count": 42})
 slog.Info("message", "key", "value", "count", 42)
 
 // After (golog)
-golog.Info("message", map[string]any{"key": "value", "count": 42})
+golog.Info("message", golog.Str("key", "value"), golog.Int("count", 42))
 ```
