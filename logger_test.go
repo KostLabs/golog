@@ -12,16 +12,24 @@ import (
 type BLogger struct{ b *bytes.Buffer }
 
 func (b *BLogger) Info(msg string, additionalFields ...map[string]any) {
-	b.b.WriteString("I:" + msg + "\n")
+	b.b.WriteString("I:")
+	b.b.WriteString(msg)
+	b.b.WriteString("\n")
 }
 func (b *BLogger) Warn(msg string, additionalFields ...map[string]any) {
-	b.b.WriteString("W:" + msg + "\n")
+	b.b.WriteString("W:")
+	b.b.WriteString(msg)
+	b.b.WriteString("\n")
 }
 func (b *BLogger) Error(msg string, additionalFields ...map[string]any) {
-	b.b.WriteString("E:" + msg + "\n")
+	b.b.WriteString("E:")
+	b.b.WriteString(msg)
+	b.b.WriteString("\n")
 }
 func (b *BLogger) Debug(msg string, additionalFields ...map[string]any) {
-	b.b.WriteString("D:" + msg + "\n")
+	b.b.WriteString("D:")
+	b.b.WriteString(msg)
+	b.b.WriteString("\n")
 }
 
 func TestLoggerWithInfo(t *testing.T) {
