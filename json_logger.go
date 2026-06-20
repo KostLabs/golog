@@ -22,6 +22,7 @@ const (
 // helpers to customize level, output and base fields.
 type JSONLogger struct {
 	output     io.Writer
+	//goverifier:ignore:any-type
 	baseFields map[string]any
 	level      Level
 	mutex      sync.Mutex
@@ -88,6 +89,7 @@ func WithBaseFields(fields map[string]any) Option {
 
 // WithBaseField adds a single base field key/value that will be included in
 // every log entry.
+//goverifier:ignore:any-type
 func WithBaseField(key string, value any) Option {
 	return func(jsonLogger *JSONLogger) { jsonLogger.baseFields[key] = value }
 }

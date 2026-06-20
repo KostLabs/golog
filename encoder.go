@@ -13,10 +13,12 @@ import (
 // It returns true when encoding succeeded, or false when the value contains
 // a type this fast encoder doesn't support (caller should fall back to
 // encoding/json in that case).
+//goverifier:ignore:any-type
 func FastEncode(buffer *bytes.Buffer, value any) bool {
 	return encodeValue(buffer, value)
 }
 
+//goverifier:ignore:any-type
 func encodeValue(buffer *bytes.Buffer, value any) bool {
 	switch typedValue := value.(type) {
 	case nil:

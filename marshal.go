@@ -10,6 +10,7 @@ import (
 // MarshalToBuffer attempts to encode arbitrary values using reflection into
 // the provided buffer. It returns an error if it encounters an unsupported
 // type (e.g., chan, func, complex) that we don't want to attempt to encode.
+//goverifier:ignore:any-type
 func MarshalToBuffer(buf *bytes.Buffer, v any) error {
 	return marshalValue(buf, reflect.ValueOf(v))
 }
