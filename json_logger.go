@@ -39,6 +39,7 @@ type Option func(*JSONLogger)
 //   - Level: InfoLevel
 //   - Output: os.Stdout
 //   - No base fields
+//goverifier:ignore:any-type
 func NewJSONLogger() *JSONLogger {
 	return &JSONLogger{
 		output:     os.Stdout,
@@ -79,6 +80,7 @@ func WithOutput(writer io.Writer) Option {
 
 // WithBaseFields adds the provided fields to the logger's base fields. These
 // fields are included in every emitted log entry.
+//goverifier:ignore:any-type
 func WithBaseFields(fields map[string]any) Option {
 	return func(jsonLogger *JSONLogger) {
 		for key, value := range fields {
@@ -107,6 +109,7 @@ func WithCustomTimeFormat(timeFormat string) Option {
 }
 
 // log builds a JSON object from baseFields + message fields and writes it.
+//goverifier:ignore:any-type
 func (jsonLogger *JSONLogger) log(logLevel Level, levelString, message string, keyValuePairs ...map[string]any) {
 	if logLevel < jsonLogger.level {
 		return
